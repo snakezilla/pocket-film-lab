@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#111" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Pocket Film Lab</title>
+  </head>
+  <body>
+    <main id="app">
+      <header class="bar">
+        <h1>Pocket Film Lab</h1>
+        <label class="btn" for="file">Open photo</label>
+        <input id="file" type="file" accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif" hidden />
+      </header>
+
+      <section id="stage" class="stage" aria-live="polite">
+        <p id="empty" class="empty">Open a JPEG or PNG from Photos or Files.<br />It stays on this phone.</p>
+        <canvas id="result" hidden aria-label="Processed photo"></canvas>
+        <canvas id="original" hidden aria-label="Original photo"></canvas>
+        <span id="badge" class="badge" hidden>Original</span>
+      </section>
+
+      <p id="status" class="status" role="status"></p>
+
+      <section id="controls" class="controls" hidden>
+        <div class="row looks" role="radiogroup" aria-label="Look" id="looks"></div>
+        <label class="slider">Strength <output id="strength-v"></output>
+          <input id="strength" type="range" min="0" max="1" step="0.01" /></label>
+        <label class="slider">Exposure <output id="exposure-v"></output>
+          <input id="exposure" type="range" min="-2" max="2" step="0.05" /></label>
+        <label class="slider">Grain <output id="grain-v"></output>
+          <input id="grain" type="range" min="0" max="1" step="0.01" /></label>
+        <label class="slider">Halation <output id="halo-v"></output>
+          <input id="halo" type="range" min="0" max="1" step="0.01" /></label>
+        <div class="row">
+          <button id="compare" class="btn ghost" type="button" aria-pressed="false">Hold for original</button>
+          <button id="reset" class="btn ghost" type="button">Reset</button>
+        </div>
+        <div class="row">
+          <button id="export" class="btn primary" type="button">Make full-size JPEG</button>
+          <button id="cancel" class="btn ghost" type="button" hidden>Cancel</button>
+          <button id="save" class="btn primary" type="button" hidden>Save / Share JPEG</button>
+        </div>
+      </section>
+
+      <details class="about">
+        <summary>What this is (and is not)</summary>
+        <p>A film-style look for photos that are already processed (JPEG/PNG). The colour comes from a datasheet-based simulation of a film negative printed on print stock (Spectral Film LUT, MIT licence), plus halation and grain made here.</p>
+        <p>It is <strong>not</strong> Chromagraph and not Steve Yedlin's transform. Chromagraph develops RAW sensor data with its own proprietary pipeline; this app does not read RAW at all.</p>
+        <p>Photos are processed on this device. Nothing is uploaded and there is no analytics. Saved JPEGs carry no EXIF or location data. Originals are never changed.</p>
+        <p>HEIC: works only if this browser can decode it. RAW (DNG etc.): not supported.</p>
+      </details>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

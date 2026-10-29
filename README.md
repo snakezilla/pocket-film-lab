@@ -1,0 +1,85 @@
+# Pocket Film Lab
+
+A small mobile web app that gives a film look to photos you already have. Open a JPEG or PNG on the iPhone, adjust the look, compare with the original, and save a new JPEG. The original photo does not change.
+
+**This is not Chromagraph and not a Yedlin clone.** Chromagraph develops RAW sensor data with a proprietary pipeline. This app works on already-rendered JPEG/PNG pixels. Its colour comes from a datasheet-based film simulation (see "Fidelity").
+
+## Use
+
+```
+npm install
+npm run dev            # http://localhost:5173, also on your LAN (--host)
+npm run build          # static site in dist/
+npm test               # unit tests (vitest)
+npm run test:e2e       # headless Chromium + WebKit (Playwright)
+```
+
+To try it on an iPhone without hosting: run `npm run dev`, then open `http://<this-mac's-LAN-IP>:5173` in Safari on the same Wi-Fi. Over plain http the share sheet is not available (Web Share needs HTTPS), so "Save / Share JPEG" downloads to the Files app instead. On HTTPS hosting it opens the share sheet, where "Save Image" puts the JPEG in Photos.
+
+## What it does
+
+- Open: Photos or Files picker. JPEG and PNG work. HEIC only works if the browser can decode it. Playwright WebKit on macOS decoded it; Chromium did not and showed a HEIC-specific message. On iPhone the Photos picker normally converts HEIC to JPEG. RAW files (DNG, CR3, NEF, ARW, …) are rejected with a clear message. Files over 80 MB, empty files and other types are rejected.
+- Decode: in the browser through an `<img>`, so EXIF orientation is applied. The photo is scaled down in halving steps to at most 2400 px on the long edge for export, and to 1280 px for the live preview. No intermediate canvas goes over iOS's 16.7 MP canvas limit.
+- Process: in a Web Worker (`src/engine/film.ts`), so the page stays responsive. Order per pixel:
+  1. sRGB to linear, then exposure (−2…+2 EV).
+  2. Halation: highlights above linear 0.5 are blurred at reduced resolution and added back in linear light, mostly red (1.0 / 0.35 / 0.05).
+  3. Soft highlight shoulder.
+  4. Film LUT (33³, tetrahedral interpolation), mixed with the plain exposed pixel by Strength.
+  5. Grain: zero mean, strongest in midtones, grain size tied to the frame size.
+- Compare: hold "Hold for original". Reset restores the defaults.
+- Export: "Make full-size JPEG" renders at 2400 px and can be cancelled. Then "Save / Share JPEG" uses the share sheet if the browser supports it, otherwise a download. This is two taps because iOS only allows sharing straight after a tap, and rendering takes longer than that window.
+- Re-import: you can pick the same file again. A new import cancels the running render.
+
+## Privacy and network
+
+- No uploads, analytics, fonts, CDNs or third-party services. The only network requests are for this site's own files (HTML/JS/CSS and `luts/*.bin`). The E2E test records every request and checks they are all same-origin.
+- A Content-Security-Policy meta tag blocks connections to other origins (`connect-src 'self'`).
+- Exports carry no source metadata. The canvas has no EXIF. The JPEG segment filter (`src/jpeg.ts`) also removes the EXIF/IPTC that Safari's encoder adds on its own. The E2E test checks with exiftool that GPS, camera make and orientation from the source are gone.
+
+## Fidelity (honest status)
+
+Measured on synthetic inputs, in `measurements/REPORT.md` (`npx vite-node tools/measure.ts`):
+
+- **Tone.** Greys stay neutral (±0.02 per channel). Black lifts to about code 6. Shadows go a little deeper (code 64 → 56). Midtones lift slightly (118 → 129 for Cine print). White rolls off to 243. The starter engine had a blue-shifted white (253, 249, 244).
+- **Colour.** The LUT is not tone-only. It shifts foliage, yellow and cyan hues by 11–16° and lowers chroma by about 3–7 OKLab units on saturated colours. Skin moves very little (hue +2…4°). These are the film stocks' datasheet behaviour, not a match to Chromagraph.
+- **Grain.** Zero mean. At 100% the std-dev is 12.7 codes at mid grey and about 5–6 at the ends. The default is 35%.
+- **Halation.** Adds red (and almost no blue) within about 1% of frame width around bright sources.
+
+How the LUTs are made (`tools/make_lut.py`, `npm run luts`):
+
+- Spectral Film LUT (MIT) simulates two pairs: Kodak Vision3 500T 5219 printed on Kodak 2383 ("Cine print"), and Portra 400 on Portra Endura paper ("Portra"). This kind of negative + print emulation is the general approach Yedlin has described publicly. The stocks and every parameter here are my choices.
+- Phone JPEGs are already tone-mapped, so the full film curve would tone them twice: crushed shadows, whites stuck at about 0.81. I kept the film's cross-channel colour response and rebuilt the grey axis to be neutral. It is a 50/50 blend of the film print curve and identity (`FILM_TONE_WEIGHT`). This is a judgement call, not a measurement.
+
+Not done, because no legal reference data was available: a measured comparison against Chromagraph output. To do it, shoot the same scene, ideally with a colour checker and grey card, in Chromagraph and in the iPhone Camera, from a tripod at the same time. Then sample the patches and fit `FILM_TONE_WEIGHT`, exposure and grain. Do not use images taken from Chromagraph's marketing or app bundle.
+
+## RAW: feasibility of a real RAW-to-film engine
+
+Raw2Film (MIT) is Python with rawpy/LibRaw, OpenCV, numba, scipy, lensfunpy and wgpu, and its colour comes from Spectral Film LUT. Options for a phone:
+
+1. **Browser, LibRaw compiled to WebAssembly** (for example the LibRaw-Wasm projects; check each one's licence first). A 48 MP ProRAW DNG is about 75 MB. Demosaicing it to a float buffer takes 48 M × 3 × 4 B ≈ 576 MB, which is above what iOS Safari reliably gives one tab (often a few hundred MB to about 1–1.5 GB before the tab reloads). It would need half-size demosaic (12 MP, about 144 MB) or tiled processing. Apple ProRAW also stores a lot of its processing as DNG tags and gain maps, which LibRaw only partly reproduces. Feasible, but this is research, not a small step.
+2. **Native iOS app (Swift)**: Core Image `CIRAWFilter` decodes ProRAW/DNG to linear scene data on the GPU. The same 33³ LUT could then run as a `CIColorCube` with linear-scene input instead of display-referred input. This is the route that can approach Chromagraph's "starts from RAW" design. It needs Xcode and a developer account to install outside TestFlight. CBreezy0/luma (MIT) could be a scaffold, but as noted in the issue, its RAW+processed route grades the processed companion image.
+3. A LUT generated for **linear scene input** (Spectral Film LUT with `input_colorspace` set to linear) is the piece both routes need. It is a small change to `tools/make_lut.py` once a RAW decoder exists.
+
+## Tests (what was actually run)
+
+- `npm test`: 33 unit tests on real pixel buffers and the shipped LUT files. All controls off gives a bit-identical image. Output is deterministic per seed. +1 EV is exact. Halation is red-heavy and local. Grain has zero mean and is weaker in shadows. The LUT keeps greys neutral and changes colour. Also covered: file classification, sizing, the canvas limit, and the JPEG metadata filter.
+- `npm run test:e2e`: 12 tests in headless Chromium and in Playwright WebKit with an iPhone 13 viewport. Each one runs a built app:
+  - EXIF-rotated 4032×3024 JPEG with GPS: preview pixels have the correct orientation.
+  - Compare toggle; all controls off gives the original pixels.
+  - Export: the downloaded JPEG is 1800×2400, has no EXIF/GPS/IPTC/XMP, and its pixels have the correct orientation.
+  - Same-origin network only.
+  - Re-import, cancel, RAW/broken/unsupported rejection, the HEIC path, and the share path (with `navigator.share` stubbed).
+- Render speed in headless browsers on this Mac: `measurements/SPEED.md`.
+- **Not tested: physical iPhone Safari.** Playwright WebKit is close to Safari, but it is not iOS. Memory limits, the Photos picker, HEIC conversion, the share sheet and speed on a real phone are unverified.
+
+## Layout
+
+```
+src/engine/   color.ts, lut.ts, blur.ts, film.ts  (pure pixel code, unit tested)
+src/          main.ts (UI), worker.ts, processor.ts (worker + cancel), decode.ts,
+              export.ts, jpeg.ts (metadata strip), files.ts (checks/sizing), looks.ts
+public/luts/  print.bin, portra.bin (+ .json metadata and grey ramps)
+tools/        make_lut.py, make_fixtures.py, measure.ts, starter.ts (original engine,
+              for comparison only), speed-browser.mjs, shoot.mjs
+tests/        unit/, e2e/, fixtures/ (synthetic images only)
+```
