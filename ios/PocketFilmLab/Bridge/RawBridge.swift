@@ -85,6 +85,15 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
     // MARK: open
 
     private func open(source: String, reply: @escaping (Any?, String?) -> Void) {
+        #if DEBUG
+        // Screenshots only: `-PFLDebugOpenRaw <path>` opens that file instead of showing
+        // a picker. Compiled out of release builds; the real pickers are not exercised.
+        if let path = UserDefaults.standard.string(forKey: "PFLDebugOpenRaw") {
+            guard let copy = adopt(URL(fileURLWithPath: path)) else { reply(nil, "Debug open failed"); return }
+            startSession(url: copy, reply: reply)
+            return
+        }
+        #endif
         guard let presenter else { reply(nil, "No window"); return }
         beginOpen(reply: reply)
         if source == "files" {

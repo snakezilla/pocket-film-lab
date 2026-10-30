@@ -18,6 +18,17 @@ struct WebView: UIViewRepresentable {
             if decision == .openExternally, let url = action.request.url { UIApplication.shared.open(url) }
             decisionHandler(decision == .allow ? .allow : .cancel)
         }
+
+        #if DEBUG
+        /// Screenshots only: with `-PFLDebugOpenRaw <path>`, press "Open RAW" once loaded.
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            guard UserDefaults.standard.string(forKey: "PFLDebugOpenRaw") != nil else { return }
+            // The page wires its RAW buttons after load; give it a moment.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                webView.evaluateJavaScript("document.getElementById('open-raw').click()")
+            }
+        }
+        #endif
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }

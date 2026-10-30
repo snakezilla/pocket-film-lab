@@ -13,6 +13,7 @@
 		240F90C11F1593C3AA1746F0 /* RawBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50783F0E79FE834CFACBFE21 /* RawBridge.swift */; };
 		2BFD09A7B172303AD523A21B /* portra400-2383.json in Resources */ = {isa = PBXBuildFile; fileRef = 8EB69566444366C135C135E2 /* portra400-2383.json */; };
 		337E51BC92CFE95C6181B523 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B26E54731F644262B70B2D /* TestSupport.swift */; };
+		37E9A9E8AE4CD1642F55C484 /* ArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E93931867BE689B9525382D /* ArtifactTests.swift */; };
 		411234BE7E7B90EE4928A4C4 /* FilmLUT.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3007A19F6FE2773A409F37F /* FilmLUT.swift */; };
 		4EB5993D226F213121846F66 /* BridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E03A774BB4A2D78D7F4EA8D7 /* BridgeTests.swift */; };
 		531AA44CA17E49AF5DBF551D /* FallbackImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522147486E8FA2792CC8E51 /* FallbackImage.swift */; };
@@ -61,6 +62,7 @@
 		213B3A3F0E823CA7B9AB0EB0 /* dist */ = {isa = PBXFileReference; lastKnownFileType = folder; name = dist; path = ../dist; sourceTree = SOURCE_ROOT; };
 		21EFFAA351E06B4A7858A4BF /* PocketFilmLabTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PocketFilmLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		22CFA4642FBB71701D71F06B /* EdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeCaseTests.swift; sourceTree = "<group>"; };
+		2E93931867BE689B9525382D /* ArtifactTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactTests.swift; sourceTree = "<group>"; };
 		301A41532B0FAE196317BF09 /* FilmEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmEngine.swift; sourceTree = "<group>"; };
 		30C6EB742486DCA6DE1B8758 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		31CE71C1042EE733662E0EFE /* WhiteBalanceMatrix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhiteBalanceMatrix.swift; sourceTree = "<group>"; };
@@ -136,6 +138,7 @@
 		5771490F89F07D40AA03A822 /* PocketFilmLabTests */ = {
 			isa = PBXGroup;
 			children = (
+				2E93931867BE689B9525382D /* ArtifactTests.swift */,
 				E03A774BB4A2D78D7F4EA8D7 /* BridgeTests.swift */,
 				22CFA4642FBB71701D71F06B /* EdgeCaseTests.swift */,
 				BA05094FB264390293A791B8 /* ExportPrivacyTests.swift */,
@@ -313,6 +316,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				37E9A9E8AE4CD1642F55C484 /* ArtifactTests.swift in Sources */,
 				4EB5993D226F213121846F66 /* BridgeTests.swift in Sources */,
 				CEB19F00A156D07D734C30E3 /* EdgeCaseTests.swift in Sources */,
 				D52680F4F4A0334EB80B51B1 /* ExportPrivacyTests.swift in Sources */,
