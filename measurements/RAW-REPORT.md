@@ -2,7 +2,7 @@
 
 Measured on the iPhone 17 Pro **simulator** (iOS 26.5 runtime, Xcode 27.0 / SDK 27.0, Mac GPU). **No phone was used in any phase**: nothing here is verified on an iPhone.
 
-**Final run, after all landing-pass fixes, at revision `02b8fa7`:** iOS **50/50**, web `npm test` **45/45**, `npm run test:e2e` **12/12**, with no failures or skips. Commands, test names and the artifacts are in [`artifacts/SUMMARY.md`](artifacts/SUMMARY.md).
+**Final run, after all landing-pass fixes, at revision `02b8fa7`:** iOS **50/50**, web `npm test` **45/45**, `npm run test:e2e` **12/12**, with no failures or skips. **Regression pass at `a7b0102`** (open/clear/compare races, all reproduced, then fixed): iOS **51/51**, web **49/49**, e2e **12/12**. See the end of `artifacts/SUMMARY.md`. Commands, test names and the artifacts are in [`artifacts/SUMMARY.md`](artifacts/SUMMARY.md).
 
 ## Landing pass (2026-10-30)
 

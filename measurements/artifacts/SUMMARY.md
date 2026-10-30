@@ -36,3 +36,17 @@ iOS tests by suite: ArtifactTests 1, BridgeTests 2, EdgeCaseTests 6, ExportPriva
 Numbers from that run (simulator only): 47 MP preview path +33 MB, slider median 15 ms; 47 MP full-size HEIC export with grain and halation +256 MB, 4.9 s; bridge drag median 21 ms; export vs in-memory render mean |Δ| 0.42–0.76 codes.
 
 **Not verified:** anything on a physical iPhone (speed, memory limit, Photos/Files pickers, share sheet, saving to Photos), the per-look fidelity against Chromagraph, and halation and skin against references.
+
+## Regression pass (2026-10-30, revision `a7b0102`)
+
+The owner's four race hypotheses were checked with deferred-callback tests. **All four reproduced** against `8db7214`, and a fifth turned up on the same path. All five are fixed:
+
+1. `clear()` while a picker was open: a late pick opened a session, replied with file info and left a temp copy. Fix: clear answers the pending open as cancelled and bumps an open token. Late or old picker results are dropped and their copy removed, and the copy is no longer adopted on a background thread. Test: `LifecycleTests.testClearWhilePickerPendingIgnoresTheLatePick`.
+2. JS `RawMode.open()` resolving after `close()` reactivated the page. Fix: a call-time epoch guard. Test: "close while an open is pending".
+3. A new file opened while the old render was busy: the new file's queued render never ran. Fix: a stale result is dropped but the queue still drains. Test: "new file while the old render is busy".
+4. A compare render finishing after `invalidateCompare()` was shown and cached. Fix: a compare epoch. Test: "a compare render that finishes after invalidateCompare is discarded".
+5. A native `{stale: true}` open reply was read as a RAW file in `native.ts`. Fix: treated as no file. Test: "treats a stale open … as no file".
+
+Each new test failed before its fix (4 web tests on the old `src/`, the native one before the RawBridge change) and passes after.
+
+Final run at `a7b0102` (same simulator, Xcode and commands as above): iOS **51/51** (+1, LifecycleTests 9), web unit **49/49** (+4), e2e **12/12**. No failures, no skips. Web unit tests ran with `--maxWorkers=1` because two unrelated CPU-heavy jobs were running on this Mac: in a parallel run one existing pixel test hit vitest's 5 s timeout. No timeouts were changed. The rendered artifacts above are unchanged; this pass touched only open/clear/compare bookkeeping.

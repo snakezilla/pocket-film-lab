@@ -157,6 +157,9 @@ What was done, and the evidence, is at the top of `measurements/RAW-REPORT.md`; 
 
 Still not verified: phone, Photos/Files pickers (the screenshot uses a DEBUG-only launch argument instead of a picker), the share sheet and saving to Photos, per-look fidelity, halation and skin. No device was installed or signed, per the owner's direction.
 
+## Regression pass (2026-10-30 ~01:30): open/clear races. DONE
+All four owner hypotheses reproduced with deferred-callback tests, plus a fifth (a stale open reply was read as a file). All are fixed. Final run at `a7b0102`: iOS 51/51, web 49/49, e2e 12/12. Details at the end of `measurements/artifacts/SUMMARY.md`.
+
 ## After phase 4 (for the owner)
 1. Pair the iPhone, then `xcrun devicectl device install app --device <id> <path to .app>`, and re-run the speed and memory numbers on the phone.
 2. Shoot matched calibration pairs (Chromagraph vs iPhone ProRAW, tripod, colour checker); that is the next big fidelity step.
