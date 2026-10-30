@@ -278,3 +278,12 @@ Caveats: exposure is unknown in both pairs and the darkening may be mostly expos
 | Shadow tint | **no change** (neutral). Optional b\* −1.5 below display Y 0.01 | b\* −1.4 / −1.7 / −5.7 / +0.5: mixed | weak; skip |
 | Shoulder | **no change** | new outputs max 209-242, p99.5 199-231; ours +5 stops = 240 | measured, on target |
 | Halation tint (FilmTexture, not the LUT) | from (1, 0.32, 0.06) to about **(1, 0.45, 0.05)**, gain unchanged. Re-measure: target R−B ≈ 2×(R−G) | nothing new; the only source is still x_dusk (phase 2) | judged; derived from the phase-2 ratio of 1.5 |
+
+### Applied in phase 3
+
+- Applied: `HIGHLIGHT_WARM` (1.037, 1.0051, 0.84) over display Y 0.36 → 0.64, and `TOE_LIFT` ×1.12 at Y 0.015 (easing out at 0.004 and 0.08).
+- Kept: `BLACK_LIFT` and `CHROMA_HIGH`.
+- Not applied:
+  - `BLUE_HIGH_CHROMA`: the two pairs disagree on the amount.
+  - Halation tint: no new evidence.
+- Results on the grey axis are in `measurements/RAW-REPORT.md` §5. The greys at +3 to +6 stops now sit at b\* +8.7 to +9.4, against +8.3 to +10.6 in the references.
