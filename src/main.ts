@@ -5,6 +5,8 @@ import { encodeJpeg, saveJpeg } from './export'
 import { checkFile, exportName } from './files'
 import { LOOKS, loadLutBuffer, type Look } from './looks'
 import { CancelledError, Processor } from './processor'
+import { nativeRaw, type NativeLook, type RawSettings } from './native'
+import { RAW_DEFAULTS, RawMode } from './rawmode'
 
 type SliderKey = keyof Recipe
 
@@ -23,6 +25,13 @@ const ui = {
   exportBtn: $<HTMLButtonElement>('export'),
   cancel: $<HTMLButtonElement>('cancel'),
   save: $<HTMLButtonElement>('save'),
+  openRaw: $<HTMLButtonElement>('open-raw'),
+  openRawFiles: $<HTMLButtonElement>('open-raw-files'),
+  rawView: $<HTMLImageElement>('rawview'),
+  rawOnly: $('raw-only'),
+  wbTemp: $<HTMLInputElement>('wbTemp'),
+  wbTint: $<HTMLInputElement>('wbTint'),
+  exportHeic: $<HTMLButtonElement>('export-heic'),
 }
 const SLIDERS: readonly SliderKey[] = ['strength', 'exposure', 'grain', 'halo']
 
@@ -38,6 +47,10 @@ let state: State = { photo: null, recipe: DEFAULT_RECIPE, look: LOOKS[0], export
 const previewer = new Processor()
 const exporter = new Processor()
 let previewQueued = false
+const bridge = nativeRaw()
+const raw = bridge ? new RawMode(bridge, { view: ui.rawView, say: (m, e) => say(m, e) }) : null
+let rawLooks: readonly NativeLook[] = []
+let rawLook = ''
 let exportToken = 0
 
 function setState(patch: Partial<State>): void {
@@ -67,7 +80,7 @@ function syncControls(): void {
     $<HTMLOutputElement>(`${key}-v`).textContent = formatValue(key, state.recipe[key])
   }
   for (const btn of ui.looks.querySelectorAll('button')) {
-    btn.setAttribute('aria-checked', String(btn.dataset.look === state.look.id))
+    btn.setAttribute('aria-checked', String(btn.dataset.look === (raw?.active ? rawLook : state.look.id)))
   }
 }
 
@@ -124,6 +137,7 @@ async function onFile(file: File): Promise<void> {
     const photo = await decodePhoto(file, check)
     if (token !== state.importToken) return // a newer import replaced this one
     setState({ photo })
+    leaveRawMode()
     paint(ui.original, photo.preview)
     ui.empty.hidden = true
     ui.result.hidden = false
@@ -170,6 +184,12 @@ async function onSave(): Promise<void> {
 }
 
 function showOriginal(on: boolean): void {
+  if (raw?.active) {
+    ui.badge.hidden = !on
+    ui.compare.setAttribute('aria-pressed', String(on))
+    void raw.compare(on, rawSettings())
+    return
+  }
   if (!state.photo) return
   ui.original.hidden = !on
   ui.result.hidden = on
@@ -178,6 +198,7 @@ function showOriginal(on: boolean): void {
 }
 
 function buildLookButtons(): void {
+  ui.looks.replaceChildren()
   for (const look of LOOKS) {
     const btn = document.createElement('button')
     btn.type = 'button'
@@ -207,10 +228,25 @@ function wire(): void {
       const value = Number((event.target as HTMLInputElement).value)
       setState({ recipe: { ...state.recipe, [key]: value } })
       syncControls()
+      if (raw?.active) {
+        if (key === 'exposure') raw.invalidateCompare()
+        void renderRaw()
+        return
+      }
       invalidateExport()
       void renderPreview()
     })
   }
+  for (const input of [ui.wbTemp, ui.wbTint]) {
+    input.addEventListener('input', () => {
+      syncWb()
+      raw?.invalidateCompare()
+      void renderRaw()
+    })
+  }
+  ui.openRaw.addEventListener('click', () => void onOpenRaw('photos'))
+  ui.openRawFiles.addEventListener('click', () => void onOpenRaw('files'))
+  ui.exportHeic.addEventListener('click', () => void raw?.exportFile(rawSettings(), 'heic'))
   ui.compare.addEventListener('pointerdown', () => showOriginal(true))
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel'] as const) {
     ui.compare.addEventListener(ev, () => showOriginal(false))
@@ -219,16 +255,134 @@ function wire(): void {
   ui.compare.addEventListener('keyup', (e) => e.key === ' ' && showOriginal(false))
   ui.compare.addEventListener('contextmenu', (e) => e.preventDefault())
   ui.reset.addEventListener('click', () => {
+    if (raw?.active) {
+      resetRaw()
+      return
+    }
     setState({ recipe: DEFAULT_RECIPE })
     syncControls()
     invalidateExport()
     void renderPreview()
   })
-  ui.exportBtn.addEventListener('click', () => void onExport())
+  ui.exportBtn.addEventListener('click', () => void (raw?.active ? raw.exportFile(rawSettings(), 'jpeg') : onExport()))
   ui.cancel.addEventListener('click', () => cancelExport())
   ui.save.addEventListener('click', () => void onSave())
 }
 
+// ---- RAW mode (iOS app only): the native engine develops, this page is the control surface.
+
+function rawSettings(): RawSettings {
+  const r = state.recipe
+  return {
+    look: rawLook,
+    strength: r.strength,
+    exposure: r.exposure,
+    grain: r.grain,
+    halation: r.halo,
+    wbTemp: Number(ui.wbTemp.value),
+    wbTint: Number(ui.wbTint.value),
+  }
+}
+
+function rawLabel(): string {
+  return rawLooks.find((l) => l.id === rawLook)?.label ?? rawLook
+}
+
+function renderRaw(): Promise<void> {
+  return raw ? raw.render(rawSettings, rawLabel()) : Promise.resolve()
+}
+
+function syncWb(): void {
+  $<HTMLOutputElement>('wbTemp-v').textContent = `${Math.round(Number(ui.wbTemp.value))} K`
+  const tint = Number(ui.wbTint.value)
+  $<HTMLOutputElement>('wbTint-v').textContent = `${tint > 0 ? '+' : ''}${tint.toFixed(0)}`
+}
+
+function buildRawLookButtons(): void {
+  ui.looks.replaceChildren()
+  for (const look of rawLooks) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'btn'
+    btn.setAttribute('role', 'radio')
+    btn.dataset.look = look.id
+    btn.textContent = look.label
+    btn.setAttribute('aria-checked', String(look.id === rawLook))
+    btn.addEventListener('click', () => {
+      rawLook = look.id
+      for (const b of ui.looks.querySelectorAll('button')) b.setAttribute('aria-checked', String(b.dataset.look === rawLook))
+      void renderRaw()
+    })
+    ui.looks.append(btn)
+  }
+}
+
+function resetRaw(): void {
+  const info = raw?.file
+  setState({ recipe: { ...state.recipe, strength: RAW_DEFAULTS.strength, exposure: RAW_DEFAULTS.exposure, grain: RAW_DEFAULTS.grain, halo: RAW_DEFAULTS.halation } })
+  if (info) {
+    ui.wbTemp.value = String(info.wbTemp)
+    ui.wbTint.value = String(info.wbTint)
+  }
+  syncControls()
+  syncWb()
+  raw?.invalidateCompare()
+  void renderRaw()
+}
+
+async function onOpenRaw(source: 'photos' | 'files'): Promise<void> {
+  if (!raw) return
+  try {
+    if (!rawLooks.length) {
+      rawLooks = await raw.looks()
+      rawLook = rawLooks[0]?.id ?? ''
+    }
+    say('Opening RAW…')
+    const info = await raw.open(source)
+    if (!info) {
+      say('No RAW file opened.')
+      return
+    }
+    // Leave the JPEG path idle; it stays intact for the next JPEG/PNG.
+    previewer.cancel()
+    invalidateExport()
+    setState({ photo: null, importToken: state.importToken + 1 })
+    ui.empty.hidden = true
+    ui.result.hidden = true
+    ui.original.hidden = true
+    ui.rawView.hidden = false
+    ui.rawOnly.hidden = false
+    ui.exportHeic.hidden = false
+    ui.exportBtn.textContent = 'Save JPEG'
+    ui.controls.hidden = false
+    buildRawLookButtons()
+    resetRaw()
+    say(`${info.name} · ${info.width}×${info.height} · as shot ${Math.round(info.wbTemp)} K`)
+  } catch (error) {
+    say(error instanceof Error ? error.message : String(error), true)
+  }
+}
+
+function leaveRawMode(): void {
+  if (!raw?.active) return
+  raw.close()
+  ui.rawView.hidden = true
+  ui.rawView.removeAttribute('src')
+  ui.rawOnly.hidden = true
+  ui.exportHeic.hidden = true
+  ui.exportBtn.textContent = 'Make full-size JPEG'
+  setState({ recipe: DEFAULT_RECIPE })
+  buildLookButtons()
+  syncControls()
+}
+
+;(window as unknown as { __rawOpenError?: (m: string) => void }).__rawOpenError = (m) => say(m, true)
+
+if (raw) {
+  ui.openRaw.hidden = false
+  ui.openRawFiles.hidden = false
+  ui.empty.innerHTML = 'Open a RAW (ProRAW or DNG), JPEG or PNG.<br />It stays on this phone.'
+}
 buildLookButtons()
 syncControls()
 wire()

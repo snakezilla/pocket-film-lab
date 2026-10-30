@@ -29,6 +29,26 @@
   5,
   6
  ],
+ "grade": {
+  "chromaMid": 1.0,
+  "chromaHigh": 0.8,
+  "chromaHighY": 0.6
+ },
+ "chromaReport": {
+  "L20-40": {
+   "vsPlain": 0.748,
+   "chroma": 20.0
+  },
+  "L40-60": {
+   "vsPlain": 0.611,
+   "chroma": 20.1
+  },
+  "L70-90": {
+   "vsPlain": 0.315,
+   "chroma": 10.1
+  },
+  "highOverMid": 0.502
+ },
  "greyRampOutLinear": [
   [
    0.000581,

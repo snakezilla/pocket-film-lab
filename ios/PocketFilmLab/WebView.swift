@@ -5,19 +5,26 @@ import UniformTypeIdentifiers
 /// Hosts the bundled web build. Files are served from the app bundle under app://local/
 /// so ES modules and fetch() of the LUTs work; nothing is loaded from the network.
 struct WebView: UIViewRepresentable {
-    func makeCoordinator() -> ShareBridge { ShareBridge() }
+    final class Coordinator {
+        let share = ShareBridge()
+        let raw = RawBridge()
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.setURLSchemeHandler(BundleSchemeHandler(), forURLScheme: BundleSchemeHandler.scheme)
-        config.userContentController.addScriptMessageHandler(context.coordinator, contentWorld: .page, name: ShareBridge.name)
+        config.userContentController.addScriptMessageHandler(context.coordinator.share, contentWorld: .page, name: ShareBridge.name)
+        config.userContentController.addScriptMessageHandler(context.coordinator.raw, contentWorld: .page, name: RawBridge.name)
         config.userContentController.addUserScript(
             WKUserScript(source: ShareBridge.script, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
         let view = WKWebView(frame: .zero, configuration: config)
         view.isInspectable = true
         view.scrollView.contentInsetAdjustmentBehavior = .never
-        context.coordinator.webView = view
+        context.coordinator.share.webView = view
+        context.coordinator.raw.webView = view
         if let url = URL(string: "\(BundleSchemeHandler.scheme)://local/index.html") {
             view.load(URLRequest(url: url))
         }
@@ -78,6 +85,10 @@ final class BundleSchemeHandler: NSObject, WKURLSchemeHandler {
     func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
         guard let url = task.request.url else { return }
         let path = url.path.isEmpty || url.path == "/" ? "/index.html" : url.path
+        if let preview = PreviewStore.shared.get(path: path) {
+            respond(task, url: url, data: preview, mime: "image/jpeg")
+            return
+        }
         let file = root.appendingPathComponent(path).standardizedFileURL
         guard file.path.hasPrefix(root.standardizedFileURL.path),
               let data = try? Data(contentsOf: file) else {
@@ -85,6 +96,10 @@ final class BundleSchemeHandler: NSObject, WKURLSchemeHandler {
             return
         }
         let mime = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+        respond(task, url: url, data: data, mime: mime)
+    }
+
+    private func respond(_ task: WKURLSchemeTask, url: URL, data: Data, mime: String) {
         let response = HTTPURLResponse(
             url: url, statusCode: 200, httpVersion: "HTTP/1.1",
             headerFields: ["Content-Type": mime, "Content-Length": "\(data.count)"]

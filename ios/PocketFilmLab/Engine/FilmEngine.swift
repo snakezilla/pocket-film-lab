@@ -1,18 +1,27 @@
 import CoreImage
 import Foundation
 
-/// User-facing controls. Phase 1 covers look, strength, exposure and white balance.
+/// User-facing controls. Grain and halation default to 0 here so the bare engine is
+/// a pure colour transform; the UI sends its own defaults.
 struct FilmSettings: Equatable {
     var lookID = FilmEngine.defaultLookID
     var strength: Float = 1
     var exposure: Float = 0
     var whiteBalance: WhiteBalance? = nil
+    /// 0...1
+    var grain: Float = 0
+    /// 0...1
+    var halation: Float = 0
+    /// Shifts the grain field. Fixed by default so renders are repeatable.
+    var grainSeed: CGFloat = 0
 }
 
 /// RAW -> scene-linear -> log shaper -> film cube -> display-linear.
 /// Everything stays in Core Image so large images render in tiles on the GPU.
 final class FilmEngine {
     static let defaultLookID = "vision3-250d-2383"
+    /// Every look shipped in Resources/LUTs, in UI order.
+    static let lookIDs = ["vision3-250d-2383", "vision3-500t-2383", "portra400-2383"]
 
     /// Linear working space with half floats: keeps scene values above 1.0 and
     /// deep shadows (down to about 6e-5) intact between filters.
@@ -45,16 +54,30 @@ final class FilmEngine {
         return image
     }
 
-    /// Film look on a scene-linear image.
+    /// Film look on a scene-linear image:
+    /// halation (scene-linear) -> negative + print cube -> strength mix -> grain (print density).
     func applyFilm(to linear: CIImage, settings: FilmSettings) throws -> CIImage {
         let look = try lut(settings.lookID)
-        let film = try FilmLookKernel.apply(linear, cube: cubeImage(for: look), lut: look)
-        let strength = min(max(settings.strength, 0), 1)
-        if strength >= 1 { return film }
+        let halated = try FilmTexture.halation(linear, amount: clamp01(settings.halation))
+        let film = try FilmLookKernel.apply(halated, cube: cubeImage(for: look), lut: look)
+        let strength = clamp01(settings.strength)
         // Mix in linear light. At 0 this is the plain linear decode, clipped on output.
-        return film.applyingFilter("CIDissolveTransition", parameters: [
+        let mixed = strength >= 1 ? film : film.applyingFilter("CIDissolveTransition", parameters: [
             "inputTargetImage": linear,
             "inputTime": 1 - strength,
+        ])
+        return try FilmTexture.grain(mixed, amount: clamp01(settings.grain) * strength, seed: settings.grainSeed)
+    }
+
+    /// Exposure as a gain in linear light. Same result as CIRAWFilter's exposure for
+    /// unclipped values, and lets the preview reuse one cached decode.
+    func applyExposure(_ linear: CIImage, ev: Float) -> CIImage {
+        guard ev != 0 else { return linear }
+        let k = CGFloat(pow(2, ev))
+        return linear.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: k, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: k, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: k, w: 0),
         ])
     }
 
@@ -71,3 +94,5 @@ final class FilmEngine {
         return try applyFilm(to: linear, settings: settings)
     }
 }
+
+private func clamp01(_ v: Float) -> Float { v.isFinite ? min(max(v, 0), 1) : 0 }

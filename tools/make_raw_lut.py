@@ -12,7 +12,7 @@ Files: ios/PocketFilmLab/Resources/LUTs/<id>.cube.bin  float32 LE, size^3 * 4
        (RGBA, red index fastest, the layout CIColorCube expects)
        ios/PocketFilmLab/Resources/LUTs/<id>.json      metadata + grey ramp
 
-Usage: tools/.venv/bin/python tools/make_raw_lut.py
+Usage: tools/.venv/bin/python tools/make_raw_lut.py [look-id ...]  (default: all)
 """
 
 import json
@@ -23,6 +23,8 @@ import colour
 import numpy as np
 from spectral_film_lut.film_spectral import FilmSpectral
 from spectral_film_lut.negative_film.kodak_5207 import KODAK_5207
+from spectral_film_lut.negative_film.kodak_5219 import KODAK_5219
+from spectral_film_lut.negative_film.kodak_portra_400 import KODAK_PORTRA_400
 from spectral_film_lut.print_film.kodak_2383 import KODAK_2383
 from spectral_film_lut.utils import film_conversion
 
@@ -45,9 +47,30 @@ LOOKS = {
         "negative": KODAK_5207,
         "print": KODAK_2383,
     },
+    "vision3-500t-2383": {
+        "label": "500T Print",
+        "negative": KODAK_5219,
+        "print": KODAK_2383,
+    },
+    "portra400-2383": {
+        "label": "Portra 400 Print",
+        "negative": KODAK_PORTRA_400,
+        "print": KODAK_2383,
+    },
 }
 
 REC709 = colour.RGB_COLOURSPACES["ITU-R BT.709"]
+
+# First tuning pass against references/LOOK-TRAITS.md (phase 2).
+# Measured there: reference chroma is ~0.55-0.65x a stock render at equal L*, and
+# highlight chroma (L* 70-90) is ~0.5x midtone chroma (L* 40-60).
+# Applied as a chroma scale around the pixel's own luminance in display-linear, so
+# greys are untouched (tests keep them neutral). The curve shape is judged; the
+# targets it is fitted to are measured. See chroma_report() output.
+CHROMA_MID = 1.0       # midtones: the film model alone already lands at ~0.6x plain chroma (report)
+CHROMA_HIGH = 0.8      # trims highlight chroma toward the measured high/mid ratio of ~0.5
+CHROMA_HIGH_Y = 0.6    # ~L* 82
+CHROMA_SHADOW_Y = 0.01 # below this the scale eases back toward 1 (film already desaturates)
 
 
 def shaper_decode(s):
@@ -111,13 +134,58 @@ def neutral_axis_fix(table, neg, prt, ev):
     return fixed
 
 
+def luminance(rgb):
+    return rgb @ np.array([0.2126, 0.7152, 0.0722])
+
+
+def chroma_scale(y):
+    t = np.clip((np.log2(np.maximum(y, 1e-6)) - np.log2(0.18)) / (np.log2(CHROMA_HIGH_Y) - np.log2(0.18)), 0, 1)
+    t = t * t * (3 - 2 * t)
+    k = CHROMA_MID + (CHROMA_HIGH - CHROMA_MID) * t
+    shadow = np.clip(y / CHROMA_SHADOW_Y, 0, 1)
+    return 1 + (k - 1) * shadow
+
+
+def grade(table):
+    y = luminance(table)[..., None]
+    return np.clip(y + (table - y) * chroma_scale(y[..., 0])[..., None], 0, 1)
+
+
+def lab_chroma(display_linear):
+    xyz = colour.RGB_to_XYZ(display_linear, REC709, apply_cctf_decoding=False)
+    lab = colour.XYZ_to_Lab(xyz)
+    return lab[..., 0], np.hypot(lab[..., 1], lab[..., 2])
+
+
+def chroma_report(look_id, neg, prt, ev, graded):
+    """Our chroma vs the plain (clipped) linear render, per L* band, on random scene colours."""
+    rng = np.random.default_rng(1)
+    scene = MID_GREY * np.exp2(rng.uniform(-4, 3, (4000, 1))) * rng.dirichlet([2, 2, 2], 4000) * 3
+    film = convert(scene.reshape(-1, 1, 3), neg, prt, ev).reshape(-1, 3)
+    if graded:
+        film = grade(film)
+    l_ref, c_ref = lab_chroma(np.clip(scene, 0, 1))
+    l_out, c_out = lab_chroma(film)
+    bands = {"L20-40": (20, 40), "L40-60": (40, 60), "L70-90": (70, 90)}
+    out = {}
+    for name, (lo, hi) in bands.items():
+        m = (l_out >= lo) & (l_out < hi) & (c_ref > 5)
+        out[name] = {"vsPlain": round(float(np.median(c_out[m] / c_ref[m])), 3), "chroma": round(float(np.median(c_out[m])), 1)}
+    out["highOverMid"] = round(out["L70-90"]["chroma"] / max(out["L40-60"]["chroma"], 1e-6), 3)
+    print(look_id, "graded" if graded else "raw film", out, file=sys.stderr)
+    return out
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     axis = np.linspace(0.0, 1.0, SIZE)
     b, g, r = np.meshgrid(axis, axis, axis, indexing="ij")  # red fastest when flat
     grid = shaper_decode(np.stack([r, g, b], axis=-1))
 
+    only = set(sys.argv[1:])
     for look_id, look in LOOKS.items():
+        if only and look_id not in only:
+            continue
         neg = FilmSpectral(look["negative"])
         neg.set_color_checker()
         prt = FilmSpectral(look["print"])
@@ -125,6 +193,9 @@ def main():
         ev = find_exposure(neg, prt)
         table = convert(grid.reshape(-1, 1, 3), neg, prt, ev).reshape(grid.shape)
         table = np.clip(neutral_axis_fix(table, neg, prt, ev), 0.0, 1.0)
+        chroma_report(look_id, neg, prt, ev, graded=False)
+        table = grade(table)
+        report = chroma_report(look_id, neg, prt, ev, graded=True)
 
         rgba = np.concatenate([table, np.ones(table.shape[:-1] + (1,))], axis=-1)
         (OUT / f"{look_id}.cube.bin").write_bytes(rgba.astype("<f4").tobytes())
@@ -145,6 +216,8 @@ def main():
             "targetMidOut": TARGET_MID_OUT,
             "source": "spectral-film-lut 0.18.0 (MIT, Jan Lohse)",
             "greyRampStops": [int(x) for x in stops],
+            "grade": {"chromaMid": CHROMA_MID, "chromaHigh": CHROMA_HIGH, "chromaHighY": CHROMA_HIGH_Y},
+            "chromaReport": report,
             "greyRampOutLinear": [[round(float(c), 6) for c in row] for row in exact],
         }
         (OUT / f"{look_id}.json").write_text(json.dumps(meta, indent=1))

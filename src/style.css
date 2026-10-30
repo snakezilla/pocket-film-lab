@@ -13,6 +13,7 @@ h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: .02em; }
 .stage { position: relative; min-height: 40vh; display: grid; place-items: center; background: #0a0a0a; border-radius: 12px; overflow: hidden; touch-action: manipulation; }
 .stage canvas { display: block; max-width: 100%; max-height: 62vh; width: auto; height: auto; }
 .stage canvas[hidden] { display: none; }
+.stage img { display: block; max-width: 100%; max-height: 62vh; width: auto; height: auto; }
 .empty { color: var(--dim); text-align: center; padding: 24px; }
 .badge { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.6); padding: 2px 8px; border-radius: 6px; font-size: 13px; }
 .status { min-height: 1.4em; color: var(--dim); font-size: 14px; margin: 8px 2px; }
