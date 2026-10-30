@@ -43,17 +43,17 @@ TARGET_MID_OUT = 0.18
 
 LOOKS = {
     "vision3-250d-2383": {
-        "label": "250D Print",
+        "label": "Daylight",
         "negative": KODAK_5207,
         "print": KODAK_2383,
     },
     "vision3-500t-2383": {
-        "label": "500T Print",
+        "label": "Lamplight",
         "negative": KODAK_5219,
         "print": KODAK_2383,
     },
     "portra400-2383": {
-        "label": "Portra 400 Print",
+        "label": "Portrait",
         "negative": KODAK_PORTRA_400,
         "print": KODAK_2383,
     },

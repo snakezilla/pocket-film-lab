@@ -4,7 +4,7 @@ The LUTs simulate a film negative printed onto a print stock, from digitised
 datasheet curves. They are NOT Chromagraph or Yedlin transforms.
 
 Output: public/luts/<id>.bin  (uint16 LE, size^3 * 3, red index fastest)
-        public/luts/<id>.json (metadata + measured grey ramp)
+        tools/lut-meta/<id>.json (metadata + measured grey ramp; not shipped in the app)
 
 Usage: tools/.venv/bin/python tools/make_lut.py
 """
@@ -24,16 +24,18 @@ from spectral_film_lut.utils import film_conversion
 
 SIZE = 33
 OUT = Path(__file__).resolve().parent.parent / "public" / "luts"
+# Stock names stay out of the shipped app (App Store guideline 5.2.1).
+META_OUT = Path(__file__).resolve().parent / "lut-meta"
 
 LOOKS = {
     "print": {
-        "label": "Cine print",
+        "label": "Lamplight",
         "negative": KODAK_5219,
         "print": KODAK_2383,
         "kelvin": 5600,
     },
     "portra": {
-        "label": "Portra",
+        "label": "Portrait",
         "negative": KODAK_PORTRA_400,
         "print": KODAK_PORTRA_ENDURA,
         "kelvin": 5600,
@@ -132,7 +134,8 @@ def main():
             "greyRampFilmRaw": [[round(float(c), 4) for c in r] for r in film_out],
             "greyRampLut": [[round(float(c), 4) for c in r] for r in lut_out],
         }
-        (OUT / f"{look_id}.json").write_text(json.dumps(meta, indent=1))
+        META_OUT.mkdir(parents=True, exist_ok=True)
+        (META_OUT / f"{look_id}.json").write_text(json.dumps(meta, indent=1))
         print(look_id, "ev", ev, "bytes", data.nbytes, file=sys.stderr)
 
 

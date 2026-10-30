@@ -52,16 +52,23 @@ export function toRawSettings(a: Adjustments): RawSettings {
 }
 
 /**
- * The web look that matches a look id. Native looks are negative stocks printed on
- * 2383; the web has a cine print and a Portra look, so Portra maps to Portra and the
- * Vision3 stocks to the cine print.
+ * The web look for a look id. Native looks are negative stocks printed on 2383; the web
+ * has two (a 500T cine print and Portra), so the portrait look maps to the web portrait
+ * look and both Vision3 stocks to lamplight.
  */
+const WEB_FOR_NATIVE: Readonly<Record<string, string>> = {
+  'vision3-250d-2383': 'lamplight',
+  'vision3-500t-2383': 'lamplight',
+  'portra400-2383': 'portrait',
+}
+
 export function webLookFor(look: string): Look {
-  return LOOKS.find((l) => l.id === look) ?? (look.includes('portra') ? LOOKS[1] : LOOKS[0])
+  const id = WEB_FOR_NATIVE[look] ?? look
+  return LOOKS.find((l) => l.id === id) ?? LOOKS[0]
 }
 
 export function formatValue(key: SliderKey, v: number): string {
-  if (key === 'exposure') return `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)} EV`
+  if (key === 'exposure') return `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)}`
   return `${Math.round(v * 100)}%`
 }
 

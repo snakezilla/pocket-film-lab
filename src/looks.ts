@@ -2,15 +2,20 @@ import { type Lut3D, parseLut } from './engine/lut'
 
 export interface Look {
   readonly id: string
+  /** Shown to people. Generic names only: no film-stock trademarks in the UI. */
   readonly label: string
-  readonly note: string
+  /** The LUT file stem under public/luts (internal). */
+  readonly file: string
   readonly size: number
 }
 
-/** LUTs built offline by tools/make_lut.py from Spectral Film LUT (MIT). */
+/**
+ * LUTs built offline by tools/make_lut.py from Spectral Film LUT (MIT).
+ * lamplight: Vision3 500T 5219 negative printed on 2383. portrait: Portra 400 on Endura paper.
+ */
 export const LOOKS: readonly Look[] = [
-  { id: 'print', label: 'Cine print', note: 'Kodak Vision3 500T 5219 negative printed on Kodak 2383', size: 33 },
-  { id: 'portra', label: 'Portra', note: 'Kodak Portra 400 negative printed on Portra Endura paper', size: 33 },
+  { id: 'lamplight', label: 'Lamplight', file: 'print', size: 33 },
+  { id: 'portrait', label: 'Portrait', file: 'portra', size: 33 },
 ]
 
 const cache = new Map<string, Promise<ArrayBuffer>>()
@@ -19,9 +24,9 @@ const cache = new Map<string, Promise<ArrayBuffer>>()
 export function loadLutBuffer(look: Look): Promise<ArrayBuffer> {
   const hit = cache.get(look.id)
   if (hit) return hit
-  const url = new URL(`luts/${look.id}.bin`, document.baseURI)
+  const url = new URL(`luts/${look.file}.bin`, document.baseURI)
   const job = fetch(url).then((res) => {
-    if (!res.ok) throw new Error(`Could not load the ${look.label} look (HTTP ${res.status})`)
+    if (!res.ok) throw new Error(`The ${look.label} look didn’t load. Try again.`)
     return res.arrayBuffer()
   })
   cache.set(look.id, job)
