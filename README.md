@@ -16,6 +16,10 @@ npm run test:e2e       # headless Chromium + WebKit (Playwright)
 
 To try it on an iPhone without hosting: run `npm run dev`, then open `http://<this-mac's-LAN-IP>:5173` in Safari on the same Wi-Fi. Over plain http the share sheet is not available (Web Share needs HTTPS), so "Save / Share JPEG" downloads to the Files app instead. On HTTPS hosting it opens the share sheet, where "Save Image" puts the JPEG in Photos.
 
+## Deploy (static)
+
+`npm ci && npm run build` writes a static site to `dist/`. It has no server code and needs no environment variables or secrets. `base: './'` makes it work from any subpath. Serve `dist/` over HTTPS: the iPhone share sheet needs it. The host must serve `luts/*.bin` as-is (any MIME type works), and must not inject third-party scripts, because the CSP meta tag in `index.html` would block them. Tooling versions: Node 22, npm 10. Rebuilding the LUTs needs Python 3.12 and `uv` (see `tools/make_lut.py`); the built LUTs are committed, so this is optional.
+
 ## What it does
 
 - Open: Photos or Files picker. JPEG and PNG work. HEIC only works if the browser can decode it. Playwright WebKit on macOS decoded it; Chromium did not and showed a HEIC-specific message. On iPhone the Photos picker normally converts HEIC to JPEG. RAW files (DNG, CR3, NEF, ARW, …) are rejected with a clear message. Files over 80 MB, empty files and other types are rejected.
@@ -69,7 +73,7 @@ Raw2Film (MIT) is Python with rawpy/LibRaw, OpenCV, numba, scipy, lensfunpy and 
   - Export: the downloaded JPEG is 1800×2400, has no EXIF/GPS/IPTC/XMP, and its pixels have the correct orientation.
   - Same-origin network only.
   - Re-import, cancel, RAW/broken/unsupported rejection, the HEIC path, and the share path (with `navigator.share` stubbed).
-- Render speed in headless browsers on this Mac: `measurements/SPEED.md`.
+- Render speed in headless browsers on this Mac: `measurements/SPEED.md`. Latest full test output: `measurements/TEST-RUN.md`.
 - **Not tested: physical iPhone Safari.** Playwright WebKit is close to Safari, but it is not iOS. Memory limits, the Photos picker, HEIC conversion, the share sheet and speed on a real phone are unverified.
 
 ## Layout
