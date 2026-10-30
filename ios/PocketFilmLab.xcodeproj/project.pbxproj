@@ -29,6 +29,7 @@
 		A5DB669DD1666DBDF102F408 /* FilmLookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5A6542DE0657DB8F26524F5 /* FilmLookTests.swift */; };
 		AE68692118AB4B02D07CFF2A /* FilmTexture.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = AE3FF3D620956F890137ADDE /* FilmTexture.ci.metal */; };
 		CCB939B1AB67B19B3A170452 /* vision3-500t-2383.json in Resources */ = {isa = PBXBuildFile; fileRef = DD9DEDE8EBDC5EF3491D07D6 /* vision3-500t-2383.json */; };
+		CEB19F00A156D07D734C30E3 /* EdgeCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CFA4642FBB71701D71F06B /* EdgeCaseTests.swift */; };
 		D52680F4F4A0334EB80B51B1 /* ExportPrivacyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA05094FB264390293A791B8 /* ExportPrivacyTests.swift */; };
 		D709C4C668A64E0B0972951B /* FilmLook.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = C27CC98BF8B339743AF479AA /* FilmLook.ci.metal */; };
 		E2A2CC8F848C71821CED9153 /* FilmEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301A41532B0FAE196317BF09 /* FilmEngine.swift */; };
@@ -56,6 +57,7 @@
 		20DAC6FD005DE611C9570757 /* PocketFilmLab.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PocketFilmLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		213B3A3F0E823CA7B9AB0EB0 /* dist */ = {isa = PBXFileReference; lastKnownFileType = folder; name = dist; path = ../dist; sourceTree = SOURCE_ROOT; };
 		21EFFAA351E06B4A7858A4BF /* PocketFilmLabTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PocketFilmLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		22CFA4642FBB71701D71F06B /* EdgeCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EdgeCaseTests.swift; sourceTree = "<group>"; };
 		301A41532B0FAE196317BF09 /* FilmEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmEngine.swift; sourceTree = "<group>"; };
 		30C6EB742486DCA6DE1B8758 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
 		31CE71C1042EE733662E0EFE /* WhiteBalanceMatrix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhiteBalanceMatrix.swift; sourceTree = "<group>"; };
@@ -129,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				E03A774BB4A2D78D7F4EA8D7 /* BridgeTests.swift */,
+				22CFA4642FBB71701D71F06B /* EdgeCaseTests.swift */,
 				BA05094FB264390293A791B8 /* ExportPrivacyTests.swift */,
 				A5A6542DE0657DB8F26524F5 /* FilmLookTests.swift */,
 				325F8169CA210362959F2B51 /* LookSheetTests.swift */,
@@ -301,6 +304,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4EB5993D226F213121846F66 /* BridgeTests.swift in Sources */,
+				CEB19F00A156D07D734C30E3 /* EdgeCaseTests.swift in Sources */,
 				D52680F4F4A0334EB80B51B1 /* ExportPrivacyTests.swift in Sources */,
 				A5DB669DD1666DBDF102F408 /* FilmLookTests.swift in Sources */,
 				9746EE6C11367DAAE09C4CFF /* LookSheetTests.swift in Sources */,
