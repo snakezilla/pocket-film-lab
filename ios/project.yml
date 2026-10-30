@@ -24,5 +24,28 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Save processed photos to your library.
         SWIFT_VERSION: "5.0"
+        MTL_COMPILER_FLAGS: -fcikernel
+        MTLLINKER_FLAGS: -cikernel
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
+  PocketFilmLabTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - PocketFilmLabTests
+    dependencies:
+      - target: PocketFilmLab
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        DEVELOPMENT_TEAM: 9HF7TSVCH4
+schemes:
+  PocketFilmLab:
+    build:
+      targets:
+        PocketFilmLab: all
+        PocketFilmLabTests: [test]
+    test:
+      targets:
+        - PocketFilmLabTests

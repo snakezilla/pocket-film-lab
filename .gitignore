@@ -7,3 +7,4 @@ measurements/out
 ios/build
 ios/*.xcodeproj/xcuserdata
 references/local
+ios/TestData
