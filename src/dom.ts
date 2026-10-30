@@ -31,6 +31,7 @@ export function findRefs() {
     reset: $<HTMLButtonElement>('reset'),
     save: $<HTMLButtonElement>('save'),
     saveLabel: $('save-label'),
+    saveIcon: $('save-icon'),
     share: $<HTMLButtonElement>('share'),
     stop: $<HTMLButtonElement>('stop'),
     denied: $('denied'),

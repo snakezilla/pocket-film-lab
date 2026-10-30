@@ -56,7 +56,7 @@ function paint(): void {
     adj: state.adj,
     looks: state.looks,
     asShot: hero?.info ?? batch?.items.find((it) => it.info)?.info ?? null,
-    count: batch?.items.length ?? 0,
+    count: batch ? saveable(batch).length : 0,
     hasRaw: batch?.items.some((it) => it.engine === 'raw') ?? false,
   })
 }

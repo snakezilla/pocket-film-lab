@@ -25,6 +25,7 @@ export interface ViewState {
 
 export function render(refs: Refs, s: ViewState, strip: ThumbStrip): void {
   const batch = s.batch
+  document.body.dataset.view = batch ? 'work' : 'welcome'
   refs.welcome.hidden = batch !== null
   refs.work.hidden = batch === null
   const saving = s.save.phase === 'saving'
@@ -77,6 +78,7 @@ function renderActions(refs: Refs, s: ViewState, batch: Batch): void {
   refs.save.classList.toggle('done', done)
   refs.save.setAttribute('aria-busy', String(saving))
   refs.saveLabel.textContent = saveLabel(s.app, n, save, done)
+  setIcon(refs.saveIcon, saving ? 'spin' : done ? 'check' : null)
   const fill = refs.save.querySelector<HTMLElement>('.fill')
   fill?.style.setProperty('--p', saving ? String(save.total ? save.done / save.total : 0) : '0')
   refs.share.hidden = !s.app || saving
@@ -84,6 +86,17 @@ function renderActions(refs: Refs, s: ViewState, batch: Batch): void {
   refs.stop.hidden = !saving
   refs.stop.disabled = saving && save.stopping
   refs.denied.hidden = save.phase !== 'denied'
+}
+
+const CHECK = '<svg class="check" viewBox="0 0 18 18"><path d="M4 9.5 7.5 13 14 5.5" /></svg>'
+
+/** The spinner or check mark inside the Save button. */
+function setIcon(el: HTMLElement, icon: 'spin' | 'check' | null): void {
+  if (el.dataset.icon === (icon ?? '')) return
+  el.dataset.icon = icon ?? ''
+  el.hidden = icon === null
+  el.className = icon === 'spin' ? 'icon spin' : 'icon'
+  el.innerHTML = icon === 'check' ? CHECK : ''
 }
 
 export function saveLabel(app: boolean, n: number, save: SavePhase, done: boolean): string {

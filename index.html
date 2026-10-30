@@ -10,6 +10,9 @@
     <meta name="theme-color" content="#0e0c0b" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Give your photos the colour and grain of film, on this device." />
+    <link rel="icon" type="image/png" href="icon-180.png" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
     <title>Film Lab</title>
   </head>
   <body>
@@ -21,18 +24,25 @@
       <input id="file" type="file" multiple accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif" hidden />
 
       <section id="welcome" class="welcome">
-        <svg class="mark" viewBox="0 0 120 84" aria-hidden="true">
-          <rect x="2" y="2" width="116" height="80" rx="12" class="mark-base" />
-          <g class="mark-holes">
-            <rect x="14" y="8" width="12" height="7" rx="2" /><rect x="38" y="8" width="12" height="7" rx="2" /><rect x="62" y="8" width="12" height="7" rx="2" /><rect x="86" y="8" width="12" height="7" rx="2" />
-            <rect x="14" y="69" width="12" height="7" rx="2" /><rect x="38" y="69" width="12" height="7" rx="2" /><rect x="62" y="69" width="12" height="7" rx="2" /><rect x="86" y="69" width="12" height="7" rx="2" />
-          </g>
-          <rect x="12" y="21" width="96" height="42" rx="6" class="mark-frame" />
-          <circle cx="60" cy="48" r="9" class="mark-sun" />
-          <rect x="12" y="50" width="96" height="13" class="mark-land" />
-        </svg>
-        <h2 class="headline">Develop your photos<br />like film.</h2>
-        <p class="lede">Choose one photo or a whole set. RAW gives the best result. Nothing leaves this phone.</p>
+        <div class="welcome-copy">
+          <svg class="mark" viewBox="0 0 120 84" aria-hidden="true">
+            <defs>
+              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#5c2c34" /><stop offset="0.7" stop-color="#ec843e" /><stop offset="1" stop-color="#fbc478" />
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="116" height="80" rx="12" class="mark-base" />
+            <g class="mark-holes">
+              <rect x="14" y="8" width="12" height="7" rx="2" /><rect x="38" y="8" width="12" height="7" rx="2" /><rect x="62" y="8" width="12" height="7" rx="2" /><rect x="86" y="8" width="12" height="7" rx="2" />
+              <rect x="14" y="69" width="12" height="7" rx="2" /><rect x="38" y="69" width="12" height="7" rx="2" /><rect x="62" y="69" width="12" height="7" rx="2" /><rect x="86" y="69" width="12" height="7" rx="2" />
+            </g>
+            <rect x="12" y="21" width="96" height="42" rx="6" fill="url(#sky)" />
+            <circle cx="60" cy="48" r="8" class="mark-sun" />
+            <path d="M12 52h96v5a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6z" class="mark-land" />
+          </svg>
+          <h2 class="headline">Develop your photos<br />like film.</h2>
+          <p class="lede">Choose one photo or a whole set. RAW gives the best result. Nothing leaves this phone.</p>
+        </div>
         <div class="welcome-actions">
           <button id="pick" class="btn btn-primary btn-large" type="button">Choose Photos</button>
           <button id="pick-files" class="btn-plain" type="button" hidden>Browse Files</button>
@@ -48,10 +58,12 @@
 
       <section id="work" class="work" hidden>
         <figure id="stage" class="stage">
-          <img id="view" alt="" draggable="false" />
-          <span id="badge" class="badge" hidden>Original</span>
+          <div class="frame">
+            <img id="view" alt="" draggable="false" />
+            <span id="badge" class="badge" hidden>Original</span>
+            <button id="compare" class="compare" type="button" aria-pressed="false">Hold to compare</button>
+          </div>
           <span id="spinner" class="spinner" hidden aria-hidden="true"></span>
-          <button id="compare" class="compare" type="button" aria-pressed="false">Hold to compare</button>
         </figure>
 
         <div id="strip" class="strip" role="group" aria-label="Photos" hidden></div>
@@ -67,37 +79,37 @@
           <div class="adjust-body">
             <p id="adjust-scope" class="note" hidden></p>
             <div id="looks" class="segmented" role="radiogroup" aria-label="Look"></div>
-            <label class="slider"><span>Strength</span><output id="strength-v"></output>
-              <input id="strength" type="range" min="0" max="1" step="0.01" /></label>
-            <label class="slider"><span>Exposure</span><output id="exposure-v"></output>
-              <input id="exposure" type="range" min="-2" max="2" step="0.1" /></label>
-            <label class="slider"><span>Grain</span><output id="grain-v"></output>
-              <input id="grain" type="range" min="0" max="1" step="0.01" /></label>
-            <label class="slider"><span>Halation</span><output id="halation-v"></output>
-              <input id="halation" type="range" min="0" max="1" step="0.01" /></label>
+            <label class="slider"><span id="strength-l">Strength</span><output id="strength-v"></output>
+              <input id="strength" aria-labelledby="strength-l" type="range" min="0" max="1" step="0.01" /></label>
+            <label class="slider"><span id="exposure-l">Exposure</span><output id="exposure-v"></output>
+              <input id="exposure" aria-labelledby="exposure-l" type="range" min="-2" max="2" step="0.1" /></label>
+            <label class="slider"><span id="grain-l">Grain</span><output id="grain-v"></output>
+              <input id="grain" aria-labelledby="grain-l" type="range" min="0" max="1" step="0.01" /></label>
+            <label class="slider"><span id="halation-l">Halation</span><output id="halation-v"></output>
+              <input id="halation" aria-labelledby="halation-l" type="range" min="0" max="1" step="0.01" /></label>
             <div id="raw-only" class="group" hidden>
               <p class="group-label">RAW photos only</p>
-              <label class="slider"><span>White balance</span><output id="wbTemp-v"></output>
-                <input id="wbTemp" type="range" min="2000" max="12000" step="50" /></label>
-              <label class="slider"><span>Tint</span><output id="wbTint-v"></output>
-                <input id="wbTint" type="range" min="-100" max="100" step="1" /></label>
-              <label class="slider"><span>Softness</span><output id="softness-v"></output>
-                <input id="softness" type="range" min="0" max="1" step="0.01" /></label>
-              <label class="slider"><span>Warm highlights</span><output id="warmth-v"></output>
-                <input id="warmth" type="range" min="0" max="1" step="0.01" /></label>
+              <label class="slider"><span id="wbTemp-l">White balance</span><output id="wbTemp-v"></output>
+              <input id="wbTemp" aria-labelledby="wbTemp-l" type="range" min="2000" max="12000" step="50" /></label>
+              <label class="slider"><span id="wbTint-l">Tint</span><output id="wbTint-v"></output>
+              <input id="wbTint" aria-labelledby="wbTint-l" type="range" min="-100" max="100" step="1" /></label>
+              <label class="slider"><span id="softness-l">Softness</span><output id="softness-v"></output>
+              <input id="softness" aria-labelledby="softness-l" type="range" min="0" max="1" step="0.01" /></label>
+              <label class="slider"><span id="warmth-l">Warm highlights</span><output id="warmth-v"></output>
+              <input id="warmth" aria-labelledby="warmth-l" type="range" min="0" max="1" step="0.01" /></label>
             </div>
             <button id="reset" class="btn-plain" type="button">Reset to defaults</button>
           </div>
         </details>
 
-        <div class="actions">
-          <button id="save" class="btn btn-primary" type="button"><span class="fill" aria-hidden="true"></span><span id="save-label">Save to Photos</span></button>
-          <button id="share" class="btn btn-secondary" type="button" hidden>Share</button>
-          <button id="stop" class="btn btn-secondary" type="button" hidden>Stop</button>
-        </div>
         <div id="denied" class="denied" hidden>
           <p>Film Lab isn’t allowed to add photos. Allow “Add Photos Only” in Settings, then save again.</p>
           <button id="open-settings" class="btn-plain" type="button">Open Settings</button>
+        </div>
+        <div class="actions">
+          <button id="save" class="btn btn-primary" type="button"><span class="fill" aria-hidden="true"></span><span class="label"><span id="save-icon" class="icon" aria-hidden="true" hidden></span><span id="save-label">Save to Photos</span></span></button>
+          <button id="share" class="btn btn-secondary" type="button" hidden>Share</button>
+          <button id="stop" class="btn btn-secondary" type="button" hidden>Stop</button>
         </div>
       </section>
     </main>

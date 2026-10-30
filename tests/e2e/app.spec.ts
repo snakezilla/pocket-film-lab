@@ -197,7 +197,7 @@ test('a batch develops in a strip, adjusts together, and downloads every photo',
 
   // One look change re-develops every photo.
   await page.locator('#adjust summary').click()
-  await expect(page.locator('#adjust-scope')).toHaveText('Changes apply to all 3 photos.')
+  await expect(page.locator('#adjust-scope')).toHaveText('Changes apply to both photos.') // the unreadable one does not count
   const before = await page.locator('#strip .thumb img').first().getAttribute('src')
   await page.locator('#looks [data-look="portra"]').click()
   await expect.poll(() => page.locator('#strip .thumb img').first().getAttribute('src'), { timeout: 20_000 }).not.toBe(before)

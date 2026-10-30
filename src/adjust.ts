@@ -63,7 +63,7 @@ export class AdjustPanel {
     this.syncWb(view)
     this.refs.rawOnly.hidden = !view.hasRaw
     this.refs.adjustScope.hidden = view.count < 2
-    this.refs.adjustScope.textContent = `Changes apply to all ${view.count} photos.`
+    this.refs.adjustScope.textContent = view.count === 2 ? 'Changes apply to both photos.' : `Changes apply to all ${view.count} photos.`
   }
 
   private syncWb({ adj, asShot }: AdjustView): void {
