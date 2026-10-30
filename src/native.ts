@@ -31,6 +31,8 @@ export interface RawSettings {
   readonly exposure: number
   readonly grain: number
   readonly halation: number
+  /** 0…1, off by default. Gentle scene-linear softening (native engine only). */
+  readonly softness: number
   readonly wbTemp: number
   readonly wbTint: number
 }

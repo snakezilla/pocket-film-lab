@@ -89,6 +89,38 @@ final class TextureTests: XCTestCase {
     }
 
     /// Halation: a bright spot gets a red-orange glow around it, mid tones far away are untouched.
+    /// Softness: off changes nothing; on lowers fine-detail contrast but keeps the mean
+    /// level and greys neutral, and scales with image size like the other textures.
+    func testSoftnessIsGentleAndOffByDefault() throws {
+        XCTAssertEqual(FilmSettings().softness, 0)
+        // Checkerboard of two greys, 4-px squares, on a 4000 px canvas (sigma ~2.8 px).
+        let checker = CIFilter(name: "CICheckerboardGenerator", parameters: [
+            "inputColor0": CIColor(red: 0.09, green: 0.09, blue: 0.09),
+            "inputColor1": CIColor(red: 0.36, green: 0.36, blue: 0.36),
+            "inputWidth": 4.0, "inputSharpness": 1.0,
+        ])!.outputImage!.cropped(to: CGRect(x: 0, y: 0, width: 4000, height: 4000))
+        XCTAssertTrue(FilmTexture.soften(checker, amount: 0) === checker)
+        func contrast(_ img: CIImage) -> (std: Float, mean: Float, maxCast: Float) {
+            let px = Pixels.floats(img.cropped(to: CGRect(x: 1000, y: 1000, width: 200, height: 200)), context: engine.context)
+            var g: [Float] = []; var cast: Float = 0
+            for i in stride(from: 0, to: px.count, by: 4) {
+                g.append(px[i + 1]); cast = max(cast, abs(px[i] - px[i + 1]), abs(px[i + 2] - px[i + 1]))
+            }
+            let mean = g.reduce(0, +) / Float(g.count)
+            let std = (g.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Float(g.count)).squareRoot()
+            return (std, mean, cast)
+        }
+        let sharp = contrast(checker), soft = contrast(FilmTexture.soften(checker, amount: 1))
+        print(String(format: "SOFTNESS 4-px checker std %.4f -> %.4f, mean %.4f -> %.4f", sharp.std, soft.std, sharp.mean, soft.mean))
+        XCTAssertLessThan(soft.std, sharp.std * 0.8)
+        XCTAssertGreaterThan(soft.std, sharp.std * 0.2, "gentle, not a full blur")
+        XCTAssertEqual(soft.mean, sharp.mean, accuracy: 0.01)
+        XCTAssertLessThan(soft.maxCast, 1e-3)
+        // Bridge key round trip.
+        XCTAssertEqual(RawBridge.settings(from: ["softness": 0.5]).softness, 0.5)
+        XCTAssertEqual(RawBridge.settings(from: ["softness": 7.0]).softness, 1)
+    }
+
     func testHalationIsRedOrangeAroundHighlights() throws {
         let size: CGFloat = 1000
         let bg = flat(0.09, size: size)

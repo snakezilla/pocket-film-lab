@@ -6,7 +6,7 @@ import { checkFile, exportName } from './files'
 import { LOOKS, loadLutBuffer, type Look } from './looks'
 import { CancelledError, Processor } from './processor'
 import { nativeRaw, type NativeLook, type RawSettings } from './native'
-import { RAW_DEFAULTS, RawMode } from './rawmode'
+import { RAW_DEFAULTS, RawMode, WB_TEMP_RANGE, WB_TINT_RANGE, rangeIncluding, type SliderRange } from './rawmode'
 
 type SliderKey = keyof Recipe
 
@@ -30,6 +30,7 @@ const ui = {
   rawView: $<HTMLImageElement>('rawview'),
   rawOnly: $('raw-only'),
   wbTemp: $<HTMLInputElement>('wbTemp'),
+  soft: $<HTMLInputElement>('soft'),
   wbTint: $<HTMLInputElement>('wbTint'),
   exportHeic: $<HTMLButtonElement>('export-heic'),
 }
@@ -237,7 +238,7 @@ function wire(): void {
       void renderPreview()
     })
   }
-  for (const input of [ui.wbTemp, ui.wbTint]) {
+  for (const input of [ui.wbTemp, ui.wbTint, ui.soft]) {
     input.addEventListener('input', () => {
       syncWb()
       raw?.invalidateCompare()
@@ -279,6 +280,7 @@ function rawSettings(): RawSettings {
     exposure: r.exposure,
     grain: r.grain,
     halation: r.halo,
+    softness: Number(ui.soft.value),
     wbTemp: Number(ui.wbTemp.value),
     wbTint: Number(ui.wbTint.value),
   }
@@ -296,6 +298,7 @@ function syncWb(): void {
   $<HTMLOutputElement>('wbTemp-v').textContent = `${Math.round(Number(ui.wbTemp.value))} K`
   const tint = Number(ui.wbTint.value)
   $<HTMLOutputElement>('wbTint-v').textContent = `${tint > 0 ? '+' : ''}${tint.toFixed(0)}`
+  $<HTMLOutputElement>('soft-v').textContent = Number(ui.soft.value).toFixed(2)
 }
 
 function buildRawLookButtons(): void {
@@ -317,13 +320,22 @@ function buildRawLookButtons(): void {
   }
 }
 
+function setRange(input: HTMLInputElement, range: SliderRange): void {
+  input.min = String(range.min)
+  input.max = String(range.max)
+  input.step = String(range.step)
+}
+
 function resetRaw(): void {
   const info = raw?.file
   setState({ recipe: { ...state.recipe, strength: RAW_DEFAULTS.strength, exposure: RAW_DEFAULTS.exposure, grain: RAW_DEFAULTS.grain, halo: RAW_DEFAULTS.halation } })
   if (info) {
+    setRange(ui.wbTemp, rangeIncluding(info.wbTemp, WB_TEMP_RANGE))
+    setRange(ui.wbTint, rangeIncluding(info.wbTint, WB_TINT_RANGE))
     ui.wbTemp.value = String(info.wbTemp)
     ui.wbTint.value = String(info.wbTint)
   }
+  ui.soft.value = String(RAW_DEFAULTS.softness)
   syncControls()
   syncWb()
   raw?.invalidateCompare()

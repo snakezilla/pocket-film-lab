@@ -12,6 +12,8 @@ struct FilmSettings: Equatable {
     var grain: Float = 0
     /// 0...1
     var halation: Float = 0
+    /// 0...1. Gentle softening, off by default.
+    var softness: Float = 0
     /// Shifts the grain field. Fixed by default so renders are repeatable.
     var grainSeed: CGFloat = 0
 }
@@ -55,10 +57,11 @@ final class FilmEngine {
     }
 
     /// Film look on a scene-linear image:
-    /// halation (scene-linear) -> negative + print cube -> strength mix -> grain (print density).
+    /// softness + halation (scene-linear) -> negative + print cube -> strength mix -> grain (print density).
     func applyFilm(to linear: CIImage, settings: FilmSettings) throws -> CIImage {
         let look = try lut(settings.lookID)
-        let halated = try FilmTexture.halation(linear, amount: clamp01(settings.halation))
+        let softened = FilmTexture.soften(linear, amount: clamp01(settings.softness))
+        let halated = try FilmTexture.halation(softened, amount: clamp01(settings.halation))
         let film = try FilmLookKernel.apply(halated, cube: cubeImage(for: look), lut: look)
         let strength = clamp01(settings.strength)
         // Mix in linear light. At 0 this is the plain linear decode, clipped on output.

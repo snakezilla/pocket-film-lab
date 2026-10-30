@@ -9,7 +9,31 @@ export interface RawUi {
   readonly say: (message: string, isError?: boolean) => void
 }
 
-export const RAW_DEFAULTS = { strength: 1, exposure: 0, grain: 0.35, halation: 0.3 } as const
+export const RAW_DEFAULTS = { strength: 1, exposure: 0, grain: 0.35, halation: 0.3, softness: 0 } as const
+
+export interface SliderRange {
+  readonly min: number
+  readonly max: number
+  readonly step: number
+}
+
+/** The usual white-balance slider ranges. The native side accepts 1800–50 000 K and tint ±150. */
+export const WB_TEMP_RANGE: SliderRange = { min: 2000, max: 12000, step: 50 }
+export const WB_TINT_RANGE: SliderRange = { min: -100, max: 100, step: 1 }
+
+/**
+ * Slider bounds widened (on the step grid) to include `value`. A file shot under odd
+ * light can have an as-shot white balance outside the usual range; a range input
+ * would silently clamp it, so "as shot" would not really be as shot.
+ */
+export function rangeIncluding(value: number, range: SliderRange): SliderRange {
+  if (!Number.isFinite(value)) return range
+  return {
+    min: Math.min(range.min, Math.floor(value / range.step) * range.step),
+    max: Math.max(range.max, Math.ceil(value / range.step) * range.step),
+    step: range.step,
+  }
+}
 
 export class RawMode {
   private info: RawInfo | null = null

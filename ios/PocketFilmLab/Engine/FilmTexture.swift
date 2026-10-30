@@ -39,6 +39,26 @@ enum FilmTexture {
     private static let addKernel = load("halationAdd")
     private static let grainKernel = load("filmGrain")
 
+    /// Softness blur sigma as a fraction of the long edge (about 2.8 px on a 4032 px
+    /// file), and how much of it is mixed in at softness = 1. Both judged by eye: it
+    /// should read as an older lens or a print's slight lack of bite, not as blur.
+    static let softnessRadius: CGFloat = 0.0007
+    static let softnessMix: Float = 0.6
+
+    /// `amount` 0...1, scene-linear in and out. Mixing a blur into the sharp image in
+    /// linear light lowers fine-detail contrast but keeps edges and highlights in place.
+    /// Gate weave is not offered: on a single still it is only a sub-pixel shift.
+    static func soften(_ image: CIImage, amount: Float) -> CIImage {
+        guard amount > 0 else { return image }
+        let extent = image.extent
+        let sigma = Double(max(extent.width, extent.height) * softnessRadius)
+        let blurred = image.clampedToExtent().applyingGaussianBlur(sigma: sigma).cropped(to: extent)
+        return image.applyingFilter("CIDissolveTransition", parameters: [
+            "inputTargetImage": blurred,
+            "inputTime": amount * softnessMix,
+        ])
+    }
+
     /// `amount` 0...1. Scene-linear in, scene-linear out.
     static func halation(_ image: CIImage, amount: Float) throws -> CIImage {
         guard amount > 0 else { return image }
