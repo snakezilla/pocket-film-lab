@@ -18,6 +18,16 @@ final class PreviewStore {
         return "app://local\(Self.pathPrefix)\(name)"
     }
 
+    func removeAll() {
+        lock.lock(); defer { lock.unlock() }
+        items = []
+    }
+
+    var count: Int {
+        lock.lock(); defer { lock.unlock() }
+        return items.count
+    }
+
     func get(path: String) -> Data? {
         guard path.hasPrefix(Self.pathPrefix) else { return nil }
         let name = String(path.dropFirst(Self.pathPrefix.count))

@@ -48,6 +48,8 @@ export interface NativeRaw {
   open(source: 'photos' | 'files'): Promise<OpenResult>
   render(settings: RawSettings, compare: boolean, maxEdge: number): Promise<RenderResult>
   exportFile(settings: RawSettings, format: 'heic' | 'jpeg'): Promise<{ readonly shared: boolean; readonly ms: number }>
+  /** Native side drops the session, its temp copy and its previews. */
+  clear(): Promise<void>
 }
 
 function handler(): Handler | null {
@@ -74,5 +76,8 @@ export function nativeRaw(): NativeRaw | null {
     },
     render: (settings, compare, maxEdge) => call<RenderResult>({ cmd: 'render', settings, compare, maxEdge }),
     exportFile: (settings, format) => call({ cmd: 'export', settings, format }),
+    clear: async () => {
+      await call({ cmd: 'clear' })
+    },
   }
 }

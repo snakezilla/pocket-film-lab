@@ -58,6 +58,8 @@ export class RawMode {
   private busy = false
   private queued = false
   private comparing = false
+  /** Bumped on open and close; results from an older epoch are never shown. */
+  private epoch = 0
 
   constructor(
     private readonly bridge: NativeRaw,
@@ -78,16 +80,36 @@ export class RawMode {
 
   /** A RAW opens a native session; a JPEG/PNG/HEIC comes back as `photo` for the web path. */
   async open(source: 'photos' | 'files'): Promise<OpenResult> {
-    const res = await this.bridge.open(source)
+    let res: OpenResult
+    try {
+      res = await this.bridge.open(source)
+    } catch (error) {
+      // A failed open has already closed the previous file on the native side.
+      this.reset()
+      throw error
+    }
     if (res && 'raw' in res) {
+      this.reset()
       this.info = res.raw
-      this.compareUrl = ''
+    } else if (res) {
+      this.reset() // a JPEG/PNG went to the web path; the native file is gone
     }
     return res
   }
 
-  close(): void {
+  /** Leaves RAW mode: clears the native session too, and drops any late results. */
+  close(): Promise<void> {
+    this.reset()
+    return this.bridge.clear().catch(() => undefined)
+  }
+
+  private reset(): void {
+    this.epoch += 1
     this.info = null
+    this.filmUrl = ''
+    this.compareUrl = ''
+    this.queued = false
+    this.comparing = false
   }
 
   private maxEdge(): number {
@@ -103,9 +125,11 @@ export class RawMode {
       return
     }
     this.busy = true
+    const epoch = this.epoch
     try {
       const t0 = performance.now()
       const res = await this.bridge.render(settings(), false, this.maxEdge())
+      if (epoch !== this.epoch) return // closed or another file opened meanwhile
       if ('url' in res) {
         this.filmUrl = res.url
         if (!this.comparing) this.ui.view.src = res.url
@@ -117,7 +141,7 @@ export class RawMode {
     } finally {
       this.busy = false
     }
-    if (this.queued) {
+    if (this.queued && this.info) {
       this.queued = false
       await this.render(settings, label)
     }
@@ -130,7 +154,9 @@ export class RawMode {
       return
     }
     if (!this.compareUrl) {
+      const epoch = this.epoch
       const res = await this.bridge.render(settings, true, this.maxEdge())
+      if (epoch !== this.epoch) return
       if ('url' in res) this.compareUrl = res.url
     }
     if (this.comparing && this.compareUrl) this.ui.view.src = this.compareUrl

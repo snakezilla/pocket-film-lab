@@ -1,13 +1,23 @@
 import SwiftUI
 import WebKit
 import UniformTypeIdentifiers
+import ImageIO
 
 /// Hosts the bundled web build. Files are served from the app bundle under app://local/
 /// so ES modules and fetch() of the LUTs work; nothing is loaded from the network.
 struct WebView: UIViewRepresentable {
-    final class Coordinator {
+    final class Coordinator: NSObject, WKNavigationDelegate {
         let share = ShareBridge()
         let raw = RawBridge()
+
+        func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+                     decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            let decision = WebSecurity.decide(url: action.request.url,
+                                              isMainFrame: action.targetFrame?.isMainFrame ?? true,
+                                              userTapped: action.navigationType == .linkActivated)
+            if decision == .openExternally, let url = action.request.url { UIApplication.shared.open(url) }
+            decisionHandler(decision == .allow ? .allow : .cancel)
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -21,7 +31,10 @@ struct WebView: UIViewRepresentable {
             WKUserScript(source: ShareBridge.script, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
         let view = WKWebView(frame: .zero, configuration: config)
-        view.isInspectable = true
+        #if DEBUG
+        view.isInspectable = true // Safari Web Inspector in debug builds only
+        #endif
+        view.navigationDelegate = context.coordinator
         view.scrollView.contentInsetAdjustmentBehavior = .never
         context.coordinator.share.webView = view
         context.coordinator.raw.webView = view
@@ -63,17 +76,50 @@ extension ShareBridge: WKScriptMessageHandlerWithReply {
         didReceive message: WKScriptMessage,
         replyHandler: @escaping (Any?, String?) -> Void
     ) {
+        guard WebSecurity.isTrusted(message) else { replyHandler(nil, "Untrusted sender"); return }
         guard let body = message.body as? [String: String],
               let b64 = body["data"], let data = Data(base64Encoded: b64),
-              let image = UIImage(data: data),
               let presenter = webView?.window?.rootViewController else {
             replyHandler(false, nil)
             return
         }
-        let sheet = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        let file: URL
+        do { file = try Self.prepareFile(name: body["name"] ?? "", data: data) } catch {
+            replyHandler(nil, error.localizedDescription)
+            return
+        }
+        // Share the encoded file itself (name, format and bytes as the page made them),
+        // not a re-encoded UIImage.
+        let sheet = UIActivityViewController(activityItems: [file], applicationActivities: nil)
         sheet.popoverPresentationController?.sourceView = webView
-        sheet.completionWithItemsHandler = { _, completed, _, _ in replyHandler(completed, nil) }
+        sheet.completionWithItemsHandler = { _, completed, _, _ in
+            try? FileManager.default.removeItem(at: file.deletingLastPathComponent())
+            replyHandler(completed, nil)
+        }
         presenter.present(sheet, animated: true)
+    }
+
+    enum ShareError: Error, LocalizedError {
+        case notAnImage
+        var errorDescription: String? { "The file to share is not a JPEG or PNG image." }
+    }
+
+    /// Writes the page's file to a fresh temp folder under a safe name. Only JPEG and PNG
+    /// bytes are accepted, and the extension follows the bytes, not the page.
+    static func prepareFile(name: String, data: Data) throws -> URL {
+        guard let src = CGImageSourceCreateWithData(data as CFData, nil),
+              let type = CGImageSourceGetType(src).flatMap({ UTType($0 as String) }),
+              type.conforms(to: .jpeg) || type.conforms(to: .png),
+              CGImageSourceGetCount(src) > 0 else { throw ShareError.notAnImage }
+        let ext = type.conforms(to: .png) ? "png" : "jpg"
+        let base = (URL(fileURLWithPath: name).deletingPathExtension().lastPathComponent)
+            .filter { $0.isLetter || $0.isNumber || "-_ .".contains($0) }
+            .trimmingCharacters(in: .whitespaces)
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("share-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let file = dir.appendingPathComponent("\(base.isEmpty || base.hasPrefix(".") ? "film" : base).\(ext)")
+        try data.write(to: file)
+        return file
     }
 }
 
@@ -83,14 +129,15 @@ final class BundleSchemeHandler: NSObject, WKURLSchemeHandler {
     private let root = Bundle.main.resourceURL!.appendingPathComponent("dist")
 
     func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
-        guard let url = task.request.url else { return }
-        let path = url.path.isEmpty || url.path == "/" ? "/index.html" : url.path
-        if let preview = PreviewStore.shared.get(path: path) {
-            respond(task, url: url, data: preview, mime: path.hasSuffix(".png") ? "image/png" : "image/jpeg")
+        guard let url = task.request.url, url.host?.lowercased() == WebSecurity.host else {
+            task.didFailWithError(URLError(.unsupportedURL))
             return
         }
-        let file = root.appendingPathComponent(path).standardizedFileURL
-        guard file.path.hasPrefix(root.standardizedFileURL.path),
+        if let preview = PreviewStore.shared.get(path: url.path) {
+            respond(task, url: url, data: preview, mime: url.path.hasSuffix(".png") ? "image/png" : "image/jpeg")
+            return
+        }
+        guard let file = WebSecurity.resolve(url, root: root),
               let data = try? Data(contentsOf: file) else {
             task.didFailWithError(URLError(.fileDoesNotExist))
             return

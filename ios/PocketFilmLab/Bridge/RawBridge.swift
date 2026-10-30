@@ -12,6 +12,11 @@ import WebKit
 ///                                             or {fallback: {url, name}} for a JPEG/PNG/HEIC (web path)
 ///   {cmd: "render", settings, compare?}     -> {url, ms, width, height} or {stale: true}
 ///   {cmd: "export", settings, format}       -> {shared: Bool, ms}
+///   {cmd: "clear"}                          -> {cleared: true}; drops the session, its temp copy and previews
+///
+/// Lifecycle: every open/clear bumps `epoch`. Work queued for an older epoch is
+/// dropped before it is shown or shared, and temp files are removed on the render
+/// queue, after any work already queued for them.
 final class RawBridge: NSObject {
     static let name = "raw"
 
@@ -20,6 +25,8 @@ final class RawBridge: NSObject {
     private let queue = DispatchQueue(label: "film.render", qos: .userInitiated)
     private var session: RawSession?
     private var renderGeneration = 0
+    /// Bumped on every new file and on clear. Main thread only.
+    private(set) var epoch = 0
     private var pendingOpen: ((URL?) -> Void)?
     private var openDir: URL?
 
@@ -32,6 +39,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         didReceive message: WKScriptMessage,
         replyHandler: @escaping (Any?, String?) -> Void
     ) {
+        guard WebSecurity.isTrusted(message) else { replyHandler(nil, "Untrusted sender"); return }
         guard let body = message.body as? [String: Any], let cmd = body["cmd"] as? String else {
             replyHandler(nil, "Bad message")
             return
@@ -41,27 +49,44 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         case "open": open(source: body["source"] as? String ?? "photos", reply: replyHandler)
         case "render": render(body, reply: replyHandler)
         case "export": export(body, reply: replyHandler)
+        case "clear": clear(); replyHandler(["cleared": true], nil)
         default: replyHandler(nil, "Unknown command \(cmd)")
         }
     }
 
     private func looks(_ reply: @escaping (Any?, String?) -> Void) {
-        let list = FilmEngine.lookIDs.compactMap { id -> [String: String]? in
-            guard let lut = try? engine.lut(id) else { return nil }
-            return ["id": id, "label": lut.meta.label]
+        // On the render queue: the engine's LUT cache is only touched there.
+        queue.async {
+            let list = FilmEngine.lookIDs.compactMap { id -> [String: String]? in
+                guard let lut = try? self.engine.lut(id) else { return nil }
+                return ["id": id, "label": lut.meta.label]
+            }
+            DispatchQueue.main.async { reply(["looks": list], nil) }
         }
-        reply(["looks": list], nil)
+    }
+
+    /// `looks` for tests: replies after all work already queued (a barrier).
+    func userContentControllerLooks(_ reply: @escaping (Any?, String?) -> Void) { looks(reply) }
+
+    /// Closes the current file: no session, no temp copy, no previews. Main thread.
+    /// Work already queued for the old file finds a newer epoch and is dropped.
+    func clear() {
+        epoch += 1
+        renderGeneration += 1
+        session = nil
+        let dir = openDir
+        openDir = nil
+        queue.async {
+            if let dir { try? FileManager.default.removeItem(at: dir) }
+            PreviewStore.shared.removeAll()
+        }
     }
 
     // MARK: open
 
     private func open(source: String, reply: @escaping (Any?, String?) -> Void) {
         guard let presenter else { reply(nil, "No window"); return }
-        pendingOpen = { [weak self] url in
-            guard let self else { return }
-            guard let url else { reply(["cancelled": true], nil); return }
-            self.startSession(url: url, reply: reply)
-        }
+        beginOpen(reply: reply)
         if source == "files" {
             let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.rawImage, .jpeg, .png, .heic, .heif], asCopy: true)
             picker.delegate = self
@@ -77,13 +102,29 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         }
     }
 
+    /// Waits for a picker result. A cancelled picker replies {cancelled: true} and leaves
+    /// the current file open.
+    func beginOpen(reply: @escaping (Any?, String?) -> Void) {
+        pendingOpen = { [weak self] url in
+            guard let self else { return }
+            guard let url else { reply(["cancelled": true], nil); return }
+            self.startSession(url: url, reply: reply)
+        }
+    }
+
     /// Opens a RAW file we own (already copied). Also the entry point for tests.
     func startSession(url: URL, reply: @escaping (Any?, String?) -> Void) {
+        // A new file: anything queued for the previous one is now stale.
+        epoch += 1
+        renderGeneration += 1
+        session = nil
+        let epoch = epoch
         queue.async {
-            guard FallbackImage.isRaw(url) else { return self.handOff(url, reply: reply) }
+            guard FallbackImage.isRaw(url) else { return self.handOff(url, epoch: epoch, reply: reply) }
             do {
                 let session = try RawSession(url: url, engine: self.engine)
                 DispatchQueue.main.async {
+                    guard epoch == self.epoch else { reply(["stale": true], nil); return }
                     self.session = session
                     reply([
                         "name": url.lastPathComponent,
@@ -100,11 +141,12 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
     }
 
     /// Not RAW: serve the photo to the page, which develops it on its JPEG/PNG path.
-    private func handOff(_ url: URL, reply: @escaping (Any?, String?) -> Void) {
+    private func handOff(_ url: URL, epoch: Int, reply: @escaping (Any?, String?) -> Void) {
         do {
             let (data, name) = try FallbackImage.prepare(url, context: engine.context)
             let served = PreviewStore.shared.put(data, ext: name.lowercased().hasSuffix(".png") ? "png" : "jpg")
             DispatchQueue.main.async {
+                guard epoch == self.epoch else { reply(["stale": true], nil); return }
                 self.session = nil
                 reply(["fallback": ["url": served, "name": name]], nil)
             }
@@ -115,8 +157,11 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
 
     /// Copies the picked file into our own temp folder (the picker's copy is
     /// removed when its callback returns). The original is never written.
-    private func adopt(_ source: URL) -> URL? {
-        if let old = openDir { try? FileManager.default.removeItem(at: old) }
+    func adopt(_ source: URL) -> URL? {
+        if let old = openDir {
+            // After any queued work that still reads the old copy.
+            queue.async { try? FileManager.default.removeItem(at: old) }
+        }
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("raw-\(UUID().uuidString)")
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -137,7 +182,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
 
     // MARK: render / export
 
-    private func render(_ body: [String: Any], reply: @escaping (Any?, String?) -> Void) {
+    func render(_ body: [String: Any], reply: @escaping (Any?, String?) -> Void) {
         guard let session else { reply(nil, "No RAW file open"); return }
         let settings = Self.settings(from: body["settings"])
         let compare = body["compare"] as? Bool ?? false
@@ -153,9 +198,12 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
             let start = CFAbsoluteTimeGetCurrent()
             do {
                 let jpeg = try session.previewJPEG(settings: settings, maxEdge: edge, compare: compare)
-                let url = PreviewStore.shared.put(jpeg)
                 let ms = (CFAbsoluteTimeGetCurrent() - start) * 1000
-                DispatchQueue.main.async { reply(["url": url, "ms": ms], nil) }
+                DispatchQueue.main.async {
+                    // Cleared or another file opened while this rendered: never show it.
+                    guard self.session === session else { reply(["stale": true], nil); return }
+                    reply(["url": PreviewStore.shared.put(jpeg), "ms": ms], nil)
+                }
                 // Idle work after the preview is out: get the WB fitter ready. Runs on
                 // the render queue, so it only delays a render that is already waiting. If it
                 // fails, the first WB change builds the fitter itself and reports the error.
@@ -181,7 +229,17 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
     }
 
     private func export(_ body: [String: Any], reply: @escaping (Any?, String?) -> Void) {
-        guard let session else { reply(nil, "No RAW file open"); return }
+        renderExport(body) { file, ms, error in
+            guard let file else { reply(nil, error); return }
+            self.share(file, ms: ms, reply: reply)
+        }
+    }
+
+    /// Full-size render to a temp file. Calls back on the main thread with the file, or
+    /// an error. If the file was cleared or replaced meanwhile, the render is deleted and
+    /// never shared: a stale photo must not reach the share sheet.
+    func renderExport(_ body: [String: Any], done: @escaping (URL?, Double, String?) -> Void) {
+        guard let session else { done(nil, 0, "No RAW file open"); return }
         var settings = Self.settings(from: body["settings"])
         settings.grainSeed = CGFloat.random(in: 0...10_000).rounded()
         let format = FilmExportFormat(rawValue: body["format"] as? String ?? "heic") ?? .heic
@@ -190,9 +248,16 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
             do {
                 let file = try session.export(settings: settings, format: format)
                 let ms = (CFAbsoluteTimeGetCurrent() - start) * 1000
-                DispatchQueue.main.async { self.share(file, ms: ms, reply: reply) }
+                DispatchQueue.main.async {
+                    guard self.session === session else {
+                        try? FileManager.default.removeItem(at: file)
+                        done(nil, ms, "The photo was closed before the export finished.")
+                        return
+                    }
+                    done(file, ms, nil)
+                }
             } catch {
-                DispatchQueue.main.async { reply(nil, error.localizedDescription) }
+                DispatchQueue.main.async { done(nil, 0, error.localizedDescription) }
             }
         }
     }

@@ -399,7 +399,7 @@ async function onOpenRaw(source: 'photos' | 'files'): Promise<void> {
 
 function leaveRawMode(): void {
   if (!raw?.active) return
-  raw.close()
+  void raw.close()
   ui.rawView.hidden = true
   ui.rawView.removeAttribute('src')
   ui.rawOnly.hidden = true
