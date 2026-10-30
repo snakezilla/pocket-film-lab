@@ -30,7 +30,10 @@ struct WebView: UIViewRepresentable {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 webView.evaluateJavaScript("document.getElementById('pick').click()")
                 if defaults.bool(forKey: "PFLDebugAdjust") {
-                    webView.evaluateJavaScript("document.getElementById('adjust').open = true")
+                    webView.evaluateJavaScript("""
+                    const a = document.getElementById('adjust'); a.open = true;
+                    setTimeout(() => window.scrollTo(0, a.offsetTop - 220), 600)
+                    """)
                 }
                 let saveAfter = defaults.double(forKey: "PFLDebugSave")
                 if saveAfter > 0 {

@@ -77,8 +77,20 @@ main {
 }
 
 /* ---- Header (an iOS inline navigation bar) */
-.bar { position: relative; display: flex; align-items: center; justify-content: flex-end; min-height: 44px; }
-.title { position: absolute; left: 50%; transform: translateX(-50%); margin: 0; font-size: var(--t-body); font-weight: 600; }
+/* Sticky with a solid background that also covers the status bar, so a scrolled page never shows under it. */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 44px;
+  margin-top: calc(-1 * env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  background: var(--bg);
+}
+.title { position: absolute; left: 50%; bottom: 0; line-height: 44px; transform: translateX(-50%); margin: 0; font-size: var(--t-body); font-weight: 600; }
 body[data-view='welcome'] .title { visibility: hidden; } /* the headline names the app there */
 
 /* ---- Buttons */
