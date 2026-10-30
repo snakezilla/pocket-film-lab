@@ -72,8 +72,9 @@ export function nativeRaw(): NativeRaw | null {
   return {
     looks: async () => (await call<{ looks: NativeLook[] }>({ cmd: 'looks' })).looks,
     open: async (source) => {
-      const res = await call<RawInfo | { cancelled: true } | { fallback: FallbackPhoto }>({ cmd: 'open', source })
-      if ('cancelled' in res) return null
+      const res = await call<RawInfo | { cancelled: true } | { stale: true } | { fallback: FallbackPhoto }>({ cmd: 'open', source })
+      // stale: the file was closed or replaced while it opened.
+      if ('cancelled' in res || 'stale' in res) return null
       return 'fallback' in res ? { photo: res.fallback } : { raw: res }
     },
     render: (settings, compare, maxEdge) => call<RenderResult>({ cmd: 'render', settings, compare, maxEdge }),

@@ -60,6 +60,8 @@ export class RawMode {
   private comparing = false
   /** Bumped on open and close; results from an older epoch are never shown. */
   private epoch = 0
+  /** Bumped by invalidateCompare; a compare render from before it is discarded. */
+  private compareEpoch = 0
 
   constructor(
     private readonly bridge: NativeRaw,
@@ -80,14 +82,17 @@ export class RawMode {
 
   /** A RAW opens a native session; a JPEG/PNG/HEIC comes back as `photo` for the web path. */
   async open(source: 'photos' | 'files'): Promise<OpenResult> {
+    const epoch = this.epoch
     let res: OpenResult
     try {
       res = await this.bridge.open(source)
     } catch (error) {
       // A failed open has already closed the previous file on the native side.
-      this.reset()
+      if (epoch === this.epoch) this.reset()
       throw error
     }
+    // Closed (or another open finished) while this one was pending: don't reactivate.
+    if (epoch !== this.epoch) return null
     if (res && 'raw' in res) {
       this.reset()
       this.info = res.raw
@@ -129,15 +134,16 @@ export class RawMode {
     try {
       const t0 = performance.now()
       const res = await this.bridge.render(settings(), false, this.maxEdge())
-      if (epoch !== this.epoch) return // closed or another file opened meanwhile
-      if ('url' in res) {
+      // Closed or another file opened meanwhile: never show it, but still fall
+      // through to run a render queued for the new file.
+      if (epoch === this.epoch && 'url' in res) {
         this.filmUrl = res.url
         if (!this.comparing) this.ui.view.src = res.url
         const total = performance.now() - t0
         this.ui.say(`${label} · native ${Math.round(res.ms)} ms, round trip ${Math.round(total)} ms`)
       }
     } catch (error) {
-      this.ui.say(error instanceof Error ? error.message : String(error), true)
+      if (epoch === this.epoch) this.ui.say(error instanceof Error ? error.message : String(error), true)
     } finally {
       this.busy = false
     }
@@ -155,8 +161,10 @@ export class RawMode {
     }
     if (!this.compareUrl) {
       const epoch = this.epoch
+      const compareEpoch = this.compareEpoch
       const res = await this.bridge.render(settings, true, this.maxEdge())
-      if (epoch !== this.epoch) return
+      // Closed, new file, or settings changed (invalidateCompare) meanwhile: discard.
+      if (epoch !== this.epoch || compareEpoch !== this.compareEpoch) return
       if ('url' in res) this.compareUrl = res.url
     }
     if (this.comparing && this.compareUrl) this.ui.view.src = this.compareUrl
@@ -164,6 +172,7 @@ export class RawMode {
 
   /** Clears the cached plain decode (white balance or exposure changed). */
   invalidateCompare(): void {
+    this.compareEpoch += 1
     this.compareUrl = ''
   }
 

@@ -43,3 +43,15 @@ describe('native RAW bridge client', () => {
     expect(await bridge.open('photos')).toEqual({ photo: { url: 'app://local/__raw/p2.png', name: 'b.png' } })
   })
 })
+
+describe('native open replies', () => {
+  afterEach(() => {
+    delete (globalThis as unknown as { window?: unknown }).window
+  })
+
+  it('treats a stale open (file closed or replaced meanwhile) as no file', async () => {
+    const postMessage = vi.fn(async () => ({ stale: true }))
+    ;(globalThis as unknown as { window?: unknown }).window = { webkit: { messageHandlers: { raw: { postMessage } } } }
+    expect(await nativeRaw()!.open('photos')).toBeNull()
+  })
+})

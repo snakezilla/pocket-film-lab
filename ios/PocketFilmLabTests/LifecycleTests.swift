@@ -129,6 +129,21 @@ final class LifecycleTests: XCTestCase {
         bridge.clear()
     }
 
+    /// Clear while a picker is open, then the picker returns a file: the page was closed,
+    /// so the late pick must not open a session, and its temp copy must not linger.
+    func testClearWhilePickerPendingIgnoresTheLatePick() async throws {
+        var replies: [[String: Any]] = []
+        bridge.beginOpen { value, _ in replies.append(value as? [String: Any] ?? [:]) }
+        bridge.clear()
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.rawImage])
+        bridge.documentPicker(picker, didPickDocumentsAt: [TestData.bayer])
+        try await drain()
+        try await drain() // startSession's reply hops queue -> main
+        XCTAssertFalse(bridge.hasSession, "a late pick after clear must not open a file")
+        XCTAssertFalse(replies.contains { $0["width"] != nil }, "no session reply after clear: \(replies)")
+        XCTAssertNil(bridge.openCopyDirectory, "no temp copy left behind")
+    }
+
     func testFailedImportReportsAnError() async throws {
         let broken = tempURL("broken.heic")
         try Data("not an image".utf8).write(to: broken)

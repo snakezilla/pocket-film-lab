@@ -28,6 +28,9 @@ final class RawBridge: NSObject {
     /// Bumped on every new file and on clear. Main thread only.
     private(set) var epoch = 0
     private var pendingOpen: ((URL?) -> Void)?
+    /// Bumped when a picker opens and on clear, so a picker result that arrives after
+    /// clear (or for an older picker) is dropped. Main thread only.
+    private var openToken = 0
     private var openDir: URL?
 
     private var presenter: UIViewController? { webView?.window?.rootViewController }
@@ -65,12 +68,19 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         }
     }
 
+    /// For tests.
+    var hasSession: Bool { session != nil }
+    var openCopyDirectory: URL? { openDir }
+
     /// `looks` for tests: replies after all work already queued (a barrier).
     func userContentControllerLooks(_ reply: @escaping (Any?, String?) -> Void) { looks(reply) }
 
     /// Closes the current file: no session, no temp copy, no previews. Main thread.
     /// Work already queued for the old file finds a newer epoch and is dropped.
     func clear() {
+        // A picker still open: answer it as cancelled now; its later result is dropped.
+        openToken += 1
+        finishOpen(nil)
         epoch += 1
         renderGeneration += 1
         session = nil
@@ -114,6 +124,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
     /// Waits for a picker result. A cancelled picker replies {cancelled: true} and leaves
     /// the current file open.
     func beginOpen(reply: @escaping (Any?, String?) -> Void) {
+        openToken += 1
         pendingOpen = { [weak self] url in
             guard let self else { return }
             guard let url else { reply(["cancelled": true], nil); return }
@@ -166,21 +177,41 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
 
     /// Copies the picked file into our own temp folder (the picker's copy is
     /// removed when its callback returns). The original is never written.
+    /// Main thread.
     func adopt(_ source: URL) -> URL? {
-        if let old = openDir {
-            // After any queued work that still reads the old copy.
-            queue.async { try? FileManager.default.removeItem(at: old) }
-        }
+        Self.copyToTemp(source).map { take($0) }
+    }
+
+    /// Copies into a fresh temp folder. Touches no state, so it is safe off the main thread.
+    static func copyToTemp(_ source: URL) -> URL? {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("raw-\(UUID().uuidString)")
         do {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let dest = dir.appendingPathComponent(source.lastPathComponent)
             try FileManager.default.copyItem(at: source, to: dest)
-            openDir = dir
             return dest
         } catch {
+            try? FileManager.default.removeItem(at: dir)
             return nil
         }
+    }
+
+    /// Makes `copy` the open file's temp copy. The previous copy is removed on the
+    /// render queue, after any work already queued for it. Main thread.
+    private func take(_ copy: URL) -> URL {
+        if let old = openDir { queue.async { try? FileManager.default.removeItem(at: old) } }
+        openDir = copy.deletingLastPathComponent()
+        return copy
+    }
+
+    /// Delivers a picker result. A result for an older picker, or after clear, is
+    /// dropped and its copy removed: it must not reopen a closed page. Main thread.
+    private func finishPick(_ copy: URL?, token: Int) {
+        guard token == openToken, pendingOpen != nil else {
+            if let copy { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
+            return
+        }
+        finishOpen(copy.map { take($0) })
     }
 
     private func finishOpen(_ url: URL?) {
@@ -320,9 +351,14 @@ extension RawBridge: PHPickerViewControllerDelegate {
         guard let type else {
             return failOpen("That item is not a photo.")
         }
+        let token = openToken
         provider.loadFileRepresentation(forTypeIdentifier: type.identifier) { [weak self] url, _ in
-            let copy = url.flatMap { self?.adopt($0) }
-            DispatchQueue.main.async { self?.finishOpen(copy) }
+            // Background thread: copy only (the picker's file is gone after this returns).
+            let copy = url.flatMap(Self.copyToTemp)
+            DispatchQueue.main.async {
+                if let self { self.finishPick(copy, token: token) }
+                else if let copy { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
+            }
         }
     }
 
@@ -341,7 +377,7 @@ extension RawBridge: PHPickerViewControllerDelegate {
 
 extension RawBridge: UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        finishOpen(urls.first.flatMap(adopt))
+        finishPick(urls.first.flatMap(Self.copyToTemp), token: openToken)
     }
 
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {

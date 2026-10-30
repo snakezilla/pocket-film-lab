@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { NativeRaw, RenderResult } from '../../src/native'
+import type { NativeRaw, OpenResult, RenderResult } from '../../src/native'
 import { RawMode, WB_TEMP_LIMITS, WB_TEMP_RANGE, WB_TINT_LIMITS, WB_TINT_RANGE, rangeIncluding, wbValue } from '../../src/rawmode'
 
 describe('white balance slider range', () => {
@@ -91,5 +91,91 @@ describe('RawMode lifecycle', () => {
     ;(bridge.open as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('broken'))
     await expect(mode.open('files')).rejects.toThrow('broken')
     expect(mode.active).toBe(false)
+  })
+})
+
+describe('RawMode races (deferred callbacks)', () => {
+  const g = globalThis as unknown as { window?: unknown }
+  const infoA = { name: 'a.dng', width: 4032, height: 3024, wbTemp: 5200, wbTint: 6 }
+  const infoB = { name: 'b.dng', width: 3024, height: 4032, wbTemp: 6100, wbTint: 0 }
+  const settings = () => ({ look: 'x', strength: 1, exposure: 0, grain: 0, halation: 0, softness: 0, warmth: 0, wbTemp: 5200, wbTint: 6 })
+
+  function deferred<T>() {
+    let resolve: (v: T) => void = () => undefined
+    const promise = new Promise<T>((r) => (resolve = r))
+    return { promise, resolve }
+  }
+
+  function setup() {
+    g.window = { devicePixelRatio: 2 }
+    const renders: Array<{ compare: boolean; d: ReturnType<typeof deferred<RenderResult>> }> = []
+    const opens: Array<ReturnType<typeof deferred<OpenResult>>> = []
+    const bridge: NativeRaw = {
+      looks: async () => [],
+      open: vi.fn(() => {
+        const d = deferred<OpenResult>()
+        opens.push(d)
+        return d.promise
+      }),
+      render: vi.fn((_s, compare: boolean) => {
+        const d = deferred<RenderResult>()
+        renders.push({ compare, d })
+        return d.promise
+      }),
+      exportFile: vi.fn(async () => ({ shared: true, ms: 1 })),
+      clear: vi.fn(async () => undefined),
+    }
+    const view = { src: '', clientWidth: 400, clientHeight: 300 } as unknown as HTMLImageElement
+    const mode = new RawMode(bridge, { view, say: () => undefined })
+    const flush = () => new Promise((r) => setTimeout(r, 0))
+    return { bridge, view, mode, renders, opens, flush }
+  }
+
+  it('close while an open is pending: a late result does not reactivate the page', async () => {
+    const { mode, opens, flush } = setup()
+    const pending = mode.open('photos')
+    await flush()
+    await mode.close()
+    opens[0].resolve({ raw: infoA })
+    expect(await pending).toBeNull()
+    expect(mode.active).toBe(false)
+  })
+
+  it('new file while the old render is busy: the new file still renders', async () => {
+    const { mode, opens, renders, view, flush } = setup()
+    const o1 = mode.open('photos')
+    opens[0].resolve({ raw: infoA })
+    await o1
+    const oldRender = mode.render(settings, 'L') // busy
+    await flush()
+    const o2 = mode.open('files')
+    opens[1].resolve({ raw: infoB })
+    await o2
+    const newRender = mode.render(settings, 'L') // hits busy=true, gets queued
+    renders[0].d.resolve({ url: 'app://local/__raw/old.jpg', ms: 900 })
+    await flush()
+    expect(view.src).toBe('') // the old file's render is not shown
+    expect(renders.length).toBe(2) // the queued render for the new file ran
+    renders[1]?.d.resolve({ url: 'app://local/__raw/new.jpg', ms: 20 })
+    await Promise.all([oldRender, newRender])
+    expect(view.src).toBe('app://local/__raw/new.jpg')
+  })
+
+  it('a compare render that finishes after invalidateCompare is discarded', async () => {
+    const { mode, opens, renders, view, flush } = setup()
+    const o = mode.open('photos')
+    opens[0].resolve({ raw: infoA })
+    await o
+    const press = mode.compare(true, settings())
+    await flush()
+    mode.invalidateCompare() // e.g. white balance moved while held
+    renders[0].d.resolve({ url: 'app://local/__raw/old-compare.jpg', ms: 50 })
+    await press
+    expect(view.src).not.toBe('app://local/__raw/old-compare.jpg')
+    // The next press must fetch a fresh compare image, not reuse the stale one.
+    void mode.compare(false, settings())
+    void mode.compare(true, settings())
+    await flush()
+    expect(renders.filter((r) => r.compare).length).toBe(2)
   })
 })
