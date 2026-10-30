@@ -175,3 +175,22 @@ These are sRGB 8-bit codes for a normally exposed scene with mid grey placed nor
 | Grain amount | Luminance std of about **4 codes at midtones** (3.5-4.7, peaking around code 80-200), about 1.5 codes near black, about 3 above code 200. Fade grain to 0 in crushed blacks | measured, weak (one 2880 px JPEG) |
 | Grain size | Fine. Residual autocorrelation half-width about **0.0002-0.0004 × image width** (about 1 px at 2880 px). Treat this as a lower bound, since a slightly clumpy look reads as natural | measured, weak |
 | Halation | **Yes, subtle.** A warm orange-red glow (R > G > B, R-B about 2× R-G) around the brightest sources, decaying over about **3-5% of image width**. No saturated red ring. Highlight cores desaturate to cream | partly measured, confounded by flare and the illuminant |
+
+## Phase 2 tuning pass: where our engine stands
+
+Our numbers come from `tools/make_raw_lut.py` (its chroma report, which uses random scene colours against the plain clipped linear render) and the iOS simulator tests (`TextureTests`, the `LookSheetTests` renders of the two iPhone sample DNGs). Grain is measured at the UI default, 0.35, on a 3000 px render.
+
+| Trait | Target | Ours now (250D / 500T / Portra) | Status | How we got there |
+|---|---|---|---|---|
+| Black floor | code 4-6 | 5.2 / 5.4 / 6.2 (−8 stops) | on target | `BLACK_LIFT = 0.001`, a neutral display-linear offset. The value is measured; the offset form is judged |
+| Shoulder | ceiling ~235-240 short of specular | +4 stops → 233, +5 → 240, +6 → 244 (250D) | on target | the film model's own shoulder, unchanged |
+| Highlight/mid chroma | ≈ 0.5 | 0.51 / 0.50 / 0.40 | on target (Portra a little low) | highlight chroma scale of 0.8 above display Y 0.6. The curve shape is judged |
+| Midtone chroma | 0.55-0.65× an iPhone render | 0.61 / 0.58 / 0.66× the *plain* linear render | probably close | the film model, untouched. The comparison base differs: an iPhone render is more saturated than plain, so we may be slightly more saturated than the references |
+| Grain, midtones | ~4 codes std | 4.0 codes | on target | density bell, squared, `grainDensitySigma 0.55` |
+| Grain, > code 200 | ~3 | 2.6 | on target | same bell |
+| Grain, near black | ~1.5, fading to 0 | 0.3 at code 16, 0 at code 7 | lower than target | judged acceptable ("fade to 0 in crushed blacks") |
+| Grain size | 0.0002-0.0004 × width | cell 1/3000 of the long edge (0.00033) | on target | measured |
+| Halation | subtle, R>G>B, R−B ≈ 2×(R−G), decays over 3-5% of width | R−B 0.073, R−G 0.049 (ratio 1.5) near a 40× spot; sigma 1.2% of the long edge | close; could be a little redder | tint (1, 0.32, 0.06) and gain 0.25 are judged |
+| Highlight tint | warm cream, b* +6 to +9 | neutral (greys held neutral by design and by test) | **not done** | an open decision, see PROGRESS.md |
+| Shadow tint | 0 to −3 b* | neutral | close enough | — |
+| Shadow density | p25 about −20 codes vs an iPhone render | p25 −31 vs our *plain* render (ProRAW sample) | possibly too dense | not tuned yet. Our plain render is not an iPhone render, so this comparison is weak |

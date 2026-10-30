@@ -59,23 +59,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         pendingOpen = { [weak self] url in
             guard let self else { return }
             guard let url else { reply(["cancelled": true], nil); return }
-            self.queue.async {
-                do {
-                    let session = try RawSession(url: url, engine: self.engine)
-                    DispatchQueue.main.async {
-                        self.session = session
-                        reply([
-                            "name": url.lastPathComponent,
-                            "width": Int(session.nativeSize.width),
-                            "height": Int(session.nativeSize.height),
-                            "wbTemp": Double(session.asShot.temperature),
-                            "wbTint": Double(session.asShot.tint),
-                        ], nil)
-                    }
-                } catch {
-                    DispatchQueue.main.async { reply(nil, error.localizedDescription) }
-                }
-            }
+            self.startSession(url: url, reply: reply)
         }
         if source == "files" {
             let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.rawImage], asCopy: true)
@@ -89,6 +73,27 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
             let picker = PHPickerViewController(configuration: config)
             picker.delegate = self
             presenter.present(picker, animated: true)
+        }
+    }
+
+    /// Opens a RAW file we own (already copied). Also the entry point for tests.
+    func startSession(url: URL, reply: @escaping (Any?, String?) -> Void) {
+        queue.async {
+            do {
+                let session = try RawSession(url: url, engine: self.engine)
+                DispatchQueue.main.async {
+                    self.session = session
+                    reply([
+                        "name": url.lastPathComponent,
+                        "width": Int(session.nativeSize.width),
+                        "height": Int(session.nativeSize.height),
+                        "wbTemp": Double(session.asShot.temperature),
+                        "wbTint": Double(session.asShot.tint),
+                    ], nil)
+                }
+            } catch {
+                DispatchQueue.main.async { reply(nil, error.localizedDescription) }
+            }
         }
     }
 

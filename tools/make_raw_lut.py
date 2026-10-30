@@ -70,6 +70,11 @@ REC709 = colour.RGB_COLOURSPACES["ITU-R BT.709"]
 CHROMA_MID = 1.0       # midtones: the film model alone already lands at ~0.6x plain chroma (report)
 CHROMA_HIGH = 0.8      # trims highlight chroma toward the measured high/mid ratio of ~0.5
 CHROMA_HIGH_Y = 0.6    # ~L* 82
+# Black floor. Measured in LOOK-TRAITS: p0.5 of reference outputs sits at sRGB code
+# 4-6; the film model alone floors at code 2. A neutral flare-like offset in
+# display-linear: out' = BLACK_LIFT + out * (1 - BLACK_LIFT). With the film floor (~0.0006) the
+# black lands at ~0.0016, code 5.
+BLACK_LIFT = 0.001
 CHROMA_SHADOW_Y = 0.01 # below this the scale eases back toward 1 (film already desaturates)
 
 
@@ -148,7 +153,8 @@ def chroma_scale(y):
 
 def grade(table):
     y = luminance(table)[..., None]
-    return np.clip(y + (table - y) * chroma_scale(y[..., 0])[..., None], 0, 1)
+    graded = np.clip(y + (table - y) * chroma_scale(y[..., 0])[..., None], 0, 1)
+    return BLACK_LIFT + graded * (1 - BLACK_LIFT)
 
 
 def lab_chroma(display_linear):
@@ -204,7 +210,7 @@ def main():
         ramp_lin = MID_GREY * np.exp2(stops.astype(float))
         # Exact film-model output at each stop (not the nearest cube node), for tests.
         exact = convert(grey(ramp_lin), neg, prt, ev).reshape(-1, 1, 1, 3)
-        exact = np.clip(neutral_axis_fix(exact, neg, prt, ev), 0.0, 1.0).reshape(-1, 3)
+        exact = grade(np.clip(neutral_axis_fix(exact, neg, prt, ev), 0.0, 1.0)).reshape(-1, 3)
         meta = {
             "id": look_id,
             "label": look["label"],
@@ -216,7 +222,7 @@ def main():
             "targetMidOut": TARGET_MID_OUT,
             "source": "spectral-film-lut 0.18.0 (MIT, Jan Lohse)",
             "greyRampStops": [int(x) for x in stops],
-            "grade": {"chromaMid": CHROMA_MID, "chromaHigh": CHROMA_HIGH, "chromaHighY": CHROMA_HIGH_Y},
+            "grade": {"blackLift": BLACK_LIFT, "chromaMid": CHROMA_MID, "chromaHigh": CHROMA_HIGH, "chromaHighY": CHROMA_HIGH_Y},
             "chromaReport": report,
             "greyRampOutLinear": [[round(float(c), 6) for c in row] for row in exact],
         }

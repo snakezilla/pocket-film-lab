@@ -78,6 +78,16 @@ final class RawPipelineTests: XCTestCase {
 
     /// 47 MP (8424x5632) full-size HEIC export. Records the memory footprint.
     func testFullSize47MPExportMemory() throws {
+        try export47MP(FilmSettings(), label: "47MP export")
+    }
+
+    /// Same with grain and halation on: the halation blur is the widest filter at full size.
+    func testFullSize47MPExportMemoryWithTexture() throws {
+        var s = FilmSettings(); s.grain = 0.35; s.halation = 0.3
+        try export47MP(s, label: "47MP export + grain/halation")
+    }
+
+    private func export47MP(_ settings: FilmSettings, label: String) throws {
         let start = physFootprint()
         var peak = start
         let timer = DispatchSource.makeTimerSource(queue: .global())
@@ -85,14 +95,14 @@ final class RawPipelineTests: XCTestCase {
         timer.setEventHandler { peak = max(peak, physFootprint()) }
         timer.resume()
         let t0 = Date()
-        let image = try engine.render(raw: TestData.large47MP, settings: FilmSettings())
+        let image = try engine.render(raw: TestData.large47MP, settings: settings)
         let url = tempURL("full.heic")
         try FilmExporter(context: engine.context).write(image, format: .heic, to: url)
         timer.cancel()
         let elapsed = Date().timeIntervalSince(t0)
         let file = Pixels.properties(url)
         let mb = Double(peak - start) / 1_048_576
-        print("MEMORY 47MP export: start \(start / 1_048_576) MB, peak +\(Int(mb)) MB, \(String(format: "%.1f", elapsed)) s, \(file[kCGImagePropertyPixelWidth as String] ?? "?")x\(file[kCGImagePropertyPixelHeight as String] ?? "?")")
+        print("MEMORY \(label): start \(start / 1_048_576) MB, peak +\(Int(mb)) MB, \(String(format: "%.1f", elapsed)) s, \(file[kCGImagePropertyPixelWidth as String] ?? "?")x\(file[kCGImagePropertyPixelHeight as String] ?? "?")")
         // CIRAWFilter applies the DNG default crop: 8424x5632 sensor -> 8368x5584.
         XCTAssertEqual(file[kCGImagePropertyPixelWidth as String] as? Int, Int(image.extent.width))
         XCTAssertGreaterThan(image.extent.width * image.extent.height, 46_000_000)
