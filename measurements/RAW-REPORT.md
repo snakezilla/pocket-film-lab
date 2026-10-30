@@ -1,4 +1,86 @@
-# RAW engine: measured comparisons (phase 3)
+# RAW engine: final report (phases 1–4)
+
+Measured on 2026-10-29 on the iPhone 17 Pro **simulator** (iOS 27 SDK, Mac GPU). **No phone was available in any phase**, so nothing here is verified on an iPhone. Final test pass (phase 4, 23:58): iOS **34/34**, web `npm test` **39/39**, `npm run test:e2e` **12/12**.
+
+## Fidelity summary (honest)
+
+What the engine is: Apple's `CIRAWFilter` decodes DNG/ProRAW to scene-linear light with every Apple look switched off. A 65³ float cube then simulates a Kodak negative (Vision3 250D, Vision3 500T or Portra 400) printed on Kodak 2383, generated from Spectral Film LUT (MIT). A small grade on top was tuned by measuring public Chromagraph sample photos. Grain and halation are our own. It is not Chromagraph and copies nothing from it.
+
+How close it is to the Chromagraph feel, trait by trait. "Measured" means compared with numbers from the reference photos (`references/LOOK-TRAITS.md`). "Judged" means set by eye.
+
+| Trait | Status | Evidence |
+|---|---|---|
+| Lifted, soft blacks (floor ~code 5) | close | measured: floor 5–6 vs reference median ~5 |
+| Long highlight shoulder (+6 stops still under white) | close | measured: +6 stops = 248/245/226; references 209–251 without sun |
+| Warm, cream near-whites | close | measured: b\* +8.7 to +9.4 from +3 stops; references +8.3 to +10.6 |
+| Saturation falling with brightness | roughly | measured: high/mid chroma 0.53–0.72 vs reference 0.47–0.50, a bit too saturated in the brights |
+| Pale skies lose their blue | partly | measured direction, conservative amount: light/hazy blues ×0.72–0.83 (phase 4), references ×0.68 to ×0 |
+| Warm mid-tones keep or gain colour | partly | the film model does this; not tuned separately |
+| Shadow density (toe) | roughly | direction measured, amount judged (toe lift ×1.12) |
+| Grain: fine, strongest in mid-tones, none in white | close | measured std 4.0 / 2.6 / 2.1 codes at mid / code 197 / code 70; reference ~4 / 3 / 1.5 |
+| Halation: subtle red-orange glow | unverified | judged only; no reference has clipped light sources to measure |
+| Skin hue | unverified | judged "natural warm tan"; no reference has a skin patch big and clean enough to measure |
+
+The biggest limits on fidelity:
+1. **No matched test.** No reference photo has a grey card or colour checker, all are recompressed web images, and only two before/after pairs exist (one small, one not pixel-aligned). Every comparison is about distributions, not patches. A real calibration needs the owner to shoot the same scene in Chromagraph and in the iPhone Camera (ProRAW) from a tripod, ideally with a colour checker.
+2. **The base differs.** Chromagraph's own decode and its tone mapping of iPhone ProRAW are unknown. Ours uses Apple's decoder with its rendering off. ProRAW files may still carry some of Apple's processing in the linear data; we can't remove that.
+3. **One look was tuned.** The grade is shared by all three stocks, so 500T and Portra inherit the 250D tuning. Only 250D was compared with the references.
+
+## Phase 4: edge cases
+
+`ios/PocketFilmLabTests/EdgeCaseTests.swift` (new):
+
+| Case | Result | Test |
+|---|---|---|
+| ProRAW stored landscape with Orientation 6 | decode, preview and full-size export all come out portrait (4032×3024 → 3024×4032); export orientation tag 1 | `testRotatedProRAWIsUprightEverywhere` |
+| Bayer DNG with Orientation 8 (copy with only that tag changed) | equals the unrotated decode turned 90° counter-clockwise: mean \|Δ\| **0.00 codes** after the film look. The fast WB preview keeps the rotation | `testOrientationTagRotatesPixels` |
+| White balance at the bridge's corners (1800 K and 50 000 K, tint ±150), ProRAW and Bayer, with grain and halation on | every pixel finite and in range, through both the true decode and the fitted WB matrix. The colour moves the right way (B/R 0.11–0.53 at 50 000 K, 3.5 to 1×10⁵ at 1800 K) | `testExtremeWhiteBalanceStaysFiniteAndInRange` |
+| Bad WB values from the page (negative, 1e9, a string, NaN) | clamped to 1800–50 000 K and tint ±150, or as-shot | `testOddWhiteBalanceValuesFromThePageAreClamped` |
+| As-shot WB outside the web sliders (2000–12 000 K, tint ±100) | **bug fixed**: the range input used to clamp it, so "as shot" was not really as shot. The sliders now widen to include the file's value | `tests/unit/rawmode.test.ts` |
+| Bayer vs ProRAW linearity | +1 EV gives ×2.0 on both (median over 28 657 and 25 849 px) | `testBayerAndProRAWAreBothSceneLinear` |
+| Apple rendering options | ProRAW supports local tone map, contrast, sharpness and detail; the Bayer DNG has no local tone map. All are held at 0 where supported | `testRenderingOptionsAreOffOnBothFileTypes` |
+
+Finding: at 1800 K with tint −150 the red channel goes to about zero and some values go negative (out of gamut). The film kernel clamps them before the log shaper, so the output stays finite. That corner is extreme; the UI sliders don't reach it unless the file's own as-shot value is out there.
+
+## Phase 4: other changes
+
+- **WB fitter pre-warm.** After the first preview, the bridge builds the white-balance fitter on the render queue. First WB change: **231–353 ms cold → 78–93 ms pre-warmed** (`SpeedMemoryTests.testPrewarmedFirstWhiteBalanceChange`).
+- **Softness** (optional, off by default, scene-linear before halation): a blur with sigma 0.07% of the long edge, mixed in at up to 60%. On 4 px detail it lowers contrast to 40% at the slider maximum, with mean and neutrality unchanged (`TextureTests.testSoftnessIsGentleAndOffByDefault`). Size and mix are judged by eye. **Gate weave was not built**: on a single still it reduces to a sub-pixel shift you cannot see.
+- **Pale-sky chroma** (`BLUE_HIGH_CHROMA` 0.7 in `tools/make_raw_lut.py`, Lab hue 200–290°, ramping in from display Y 0.2 to 0.45). Probe through the 250D cube, old → new (`tools/probe_cube.py`):
+
+  | Patch (scene-linear) | L\* | C\* before → after |
+  |---|---|---|
+  | deep blue sky (0.05, 0.09, 0.20) | 31.6 | 19.8 → 19.8 |
+  | mid blue sky (0.15, 0.22, 0.45) | 56.6 | 14.6 → 14.2 |
+  | light blue sky (0.22, 0.32, 0.62) | 65.3 | 11.0 → 9.1 |
+  | hazy blue (0.30, 0.40, 0.65) | 69.8 | 6.7 → 4.8 |
+  | skin, foliage | — | unchanged |
+
+  Greys are unchanged. On the ProRAW lake frame (sky at L\* 56) the sky goes from C\* 10.1 to 9.9, as intended for a mid-dark sky. The amount is the gentler of the two measured pairs; the ramp is judged.
+
+## Final numbers (phase 4 run)
+
+| What | Result |
+|---|---|
+| 47 MP open / first preview / slider median / WB change / preview peak | 104 ms / 477 ms / 14 ms / 381 ms / +34 MB |
+| 47 MP full-size HEIC export, plain / with grain and halation | +158 MB, 3.5 s / +208 MB, 4.9 s |
+| Bridge round trip (page → render → JPEG in page), drag median | 21 ms (native 14 ms) |
+| WB change via matrix vs re-decode | 94–115 ms vs 294–349 ms; mean error 0.01–0.69 codes |
+| Export vs in-memory render, mean \|Δ\| | 0.42–0.77 codes |
+| Export metadata | allow-listed keys only; no make, GPS, MakerApple or capture date |
+
+## Remaining gaps (for the owner)
+
+1. **Device.** Install and run on an iPhone: `devicectl` listed "AE's iPhone 13 Pro" as unavailable in every phase. Speed, memory (the 47 MP export peak of ~+210 MB is the number to watch), the Photos picker, the share sheet and HEIC saving to Photos are unverified on a phone.
+2. **A real 48 MP iPhone ProRAW.** None is public under a free licence. The Leica Q2 47 MP DNG stood in.
+3. **Matched calibration shots** (see the fidelity limits above): the single most useful next step for fidelity.
+4. **Halation and skin** need reference evidence: a Chromagraph shot with a bare bulb or the sun in frame, and a portrait.
+5. **Per-stock tuning.** 500T and Portra share the 250D grade.
+6. **Picker click-through.** The PHPicker and Files UI can't be automated here; a human has to try Open RAW and RAW from Files once.
+
+---
+
+# Phase 3 detail (kept for the record)
 
 Measured on 2026-10-29 on the iPhone 17 Pro **simulator** (iOS 27 SDK, Mac GPU). No phone was available, so none of these numbers are from a phone; expect a phone to be slower. Re-run with:
 

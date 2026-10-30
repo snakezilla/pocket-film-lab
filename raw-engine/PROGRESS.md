@@ -126,9 +126,32 @@ Not done / blockers:
 - Halation tint is unchanged, because no reference has clipped sources. Blue-sky desaturation was proposed but not applied (the two pairs disagree).
 - No real 48 MP iPhone ProRAW yet.
 
-## Next: phase 4
-1. LookSheet side-by-side against the cakesauce and mezha pairs (judged). Then decide on `BLUE_HIGH_CHROMA` (×0.6 on pale blue skies).
-2. Optional softness and gate weave (off by default), as the brief asks.
-3. Pre-warm the WB fitter in the background at open, so the first WB change also takes ~110 ms.
-4. Final docs: README section for the RAW mode, THIRD_PARTY_NOTICES check, and a summary of all phases.
-5. A device install if a phone is paired. Then measure bridge latency and memory on the phone.
+## Phase 4 (2026-10-29 23:40 – 2026-10-30 00:20): edge cases, polish, final docs. DONE
+
+The final report, with the honest fidelity summary and remaining gaps, is at the top of `measurements/RAW-REPORT.md`.
+
+Done:
+- **Edge cases** (`EdgeCaseTests`, 6 new tests):
+  - Rotated photos: the ProRAW sample is stored with Orientation 6. Its decode, preview and full-size export are all portrait, with orientation tag 1.
+  - A Bayer copy with Orientation 8 (`tools/fetch_test_raws.sh` makes it with exiftool) equals the plain decode rotated, at 0.00 codes mean difference.
+  - Extreme white balance (1800/50 000 K, tint ±150) stays finite and in range on both file types, through the true decode and the WB matrix, with texture on.
+  - Bayer and ProRAW are both scene-linear (+1 EV → ×2.0). The Apple rendering options are held at 0 on both (the Bayer DNG has no local tone map).
+- **Bug fixed:** the web WB sliders (2000–12 000 K, tint ±100) silently clamped an as-shot value outside that range. They now widen to include it (`rangeIncluding` in `src/rawmode.ts`, plus a unit test).
+- **WB fitter pre-warm** after the first preview. The first WB change went from 231–353 ms to 78–93 ms (phase-3 next step 3).
+- **Softness** (optional, off by default): a native setting, a bridge key and a RAW-only slider. **Gate weave was not built**: on a still it is only a sub-pixel shift.
+- **Pale-sky chroma trim** (`BLUE_HIGH_CHROMA` 0.7). Light and hazy blues go to ×0.72–0.83 chroma, while deep blues, skin and foliage are unchanged (`tools/probe_cube.py`). This settles phase-3 next step 1. The amount is the gentler measured pair; the ramp is judged.
+- **Docs:** a README "RAW mode (iOS app only)" section, the THIRD_PARTY_NOTICES stock list, the derived fixture in TEST-RAWS.md, and the final RAW-REPORT.md.
+- **Final test pass:** iOS **34/34** on the iPhone 17 Pro simulator, web `npm test` **39/39**, `npm run test:e2e` **12/12**.
+
+Measured (simulator): see RAW-REPORT "Final numbers". 47 MP preview path +34 MB, export +208 MB / 4.9 s with texture, slider median 14 ms, bridge drag median 21 ms.
+
+Not done / blockers:
+- **No device run, in any phase.** `xcrun devicectl list devices` at 23:40 again showed "AE's iPhone 13 Pro" as unavailable; only the iPad 9 is available. iPhone apps do run on iPads in compatibility mode, but the brief scopes device testing to an iPhone, and signing for the iPad could register it in the developer account, so I left it alone. It is an option for the owner (an A10 with 2 GB RAM would be a harsh memory test). Simulator only, unverified on a phone.
+- The PHPicker / Files picker has still not been clicked through by a human.
+- Halation and skin are unverified against references (there is no usable evidence).
+
+## After phase 4 (for the owner)
+1. Pair the iPhone, then `xcrun devicectl device install app --device <id> <path to .app>`, and re-run the speed and memory numbers on the phone.
+2. Shoot matched calibration pairs (Chromagraph vs iPhone ProRAW, tripod, colour checker); that is the next big fidelity step.
+3. Share a 48 MP iPhone ProRAW for the memory test, and a Chromagraph shot with a light source in frame (halation) and a portrait (skin).
+4. Per-stock tuning for 500T and Portra.
