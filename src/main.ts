@@ -6,7 +6,17 @@ import { checkFile, exportName } from './files'
 import { LOOKS, loadLutBuffer, type Look } from './looks'
 import { CancelledError, Processor } from './processor'
 import { nativeRaw, type NativeLook, type RawSettings } from './native'
-import { RAW_DEFAULTS, RawMode, WB_TEMP_RANGE, WB_TINT_RANGE, rangeIncluding, type SliderRange } from './rawmode'
+import {
+  RAW_DEFAULTS,
+  RawMode,
+  WB_TEMP_LIMITS,
+  WB_TEMP_RANGE,
+  WB_TINT_LIMITS,
+  WB_TINT_RANGE,
+  rangeIncluding,
+  wbValue,
+  type SliderRange,
+} from './rawmode'
 
 type SliderKey = keyof Recipe
 
@@ -53,6 +63,8 @@ const raw = bridge ? new RawMode(bridge, { view: ui.rawView, say: (m, e) => say(
 let rawLooks: readonly NativeLook[] = []
 let rawLook = ''
 let exportToken = 0
+/** Which WB sliders the user has moved since the file opened (or Reset). */
+let wbTouched = { temp: false, tint: false }
 
 function setState(patch: Partial<State>): void {
   state = { ...state, ...patch }
@@ -240,6 +252,8 @@ function wire(): void {
   }
   for (const input of [ui.wbTemp, ui.wbTint, ui.soft]) {
     input.addEventListener('input', () => {
+      if (input === ui.wbTemp) wbTouched = { ...wbTouched, temp: true }
+      if (input === ui.wbTint) wbTouched = { ...wbTouched, tint: true }
       syncWb()
       raw?.invalidateCompare()
       void renderRaw()
@@ -281,8 +295,8 @@ function rawSettings(): RawSettings {
     grain: r.grain,
     halation: r.halo,
     softness: Number(ui.soft.value),
-    wbTemp: Number(ui.wbTemp.value),
-    wbTint: Number(ui.wbTint.value),
+    wbTemp: wbValue(Number(ui.wbTemp.value), raw?.file?.wbTemp, wbTouched.temp),
+    wbTint: wbValue(Number(ui.wbTint.value), raw?.file?.wbTint, wbTouched.tint),
   }
 }
 
@@ -328,10 +342,11 @@ function setRange(input: HTMLInputElement, range: SliderRange): void {
 
 function resetRaw(): void {
   const info = raw?.file
+  wbTouched = { temp: false, tint: false }
   setState({ recipe: { ...state.recipe, strength: RAW_DEFAULTS.strength, exposure: RAW_DEFAULTS.exposure, grain: RAW_DEFAULTS.grain, halo: RAW_DEFAULTS.halation } })
   if (info) {
-    setRange(ui.wbTemp, rangeIncluding(info.wbTemp, WB_TEMP_RANGE))
-    setRange(ui.wbTint, rangeIncluding(info.wbTint, WB_TINT_RANGE))
+    setRange(ui.wbTemp, rangeIncluding(info.wbTemp, WB_TEMP_RANGE, WB_TEMP_LIMITS))
+    setRange(ui.wbTint, rangeIncluding(info.wbTint, WB_TINT_RANGE, WB_TINT_LIMITS))
     ui.wbTemp.value = String(info.wbTemp)
     ui.wbTint.value = String(info.wbTint)
   }

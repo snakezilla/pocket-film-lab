@@ -1,6 +1,6 @@
 # RAW engine: final report (phases 1–4)
 
-Measured on 2026-10-29 on the iPhone 17 Pro **simulator** (iOS 27 SDK, Mac GPU). **No phone was available in any phase**, so nothing here is verified on an iPhone. Final test pass (phase 4, 23:58): iOS **34/34**, web `npm test` **39/39**, `npm run test:e2e` **12/12**.
+Measured on 2026-10-29 on the iPhone 17 Pro **simulator** (iOS 27 SDK, Mac GPU). **No phone was available in any phase**, so nothing here is verified on an iPhone. Final test pass (phase 4, 00:04): iOS **34/34**, web `npm test` **41/41**, `npm run test:e2e` **12/12**.
 
 ## Fidelity summary (honest)
 
@@ -36,7 +36,7 @@ The biggest limits on fidelity:
 | Bayer DNG with Orientation 8 (copy with only that tag changed) | equals the unrotated decode turned 90° counter-clockwise: mean \|Δ\| **0.00 codes** after the film look. The fast WB preview keeps the rotation | `testOrientationTagRotatesPixels` |
 | White balance at the bridge's corners (1800 K and 50 000 K, tint ±150), ProRAW and Bayer, with grain and halation on | every pixel finite and in range, through both the true decode and the fitted WB matrix. The colour moves the right way (B/R 0.11–0.53 at 50 000 K, 3.5 to 1×10⁵ at 1800 K) | `testExtremeWhiteBalanceStaysFiniteAndInRange` |
 | Bad WB values from the page (negative, 1e9, a string, NaN) | clamped to 1800–50 000 K and tint ±150, or as-shot | `testOddWhiteBalanceValuesFromThePageAreClamped` |
-| As-shot WB outside the web sliders (2000–12 000 K, tint ±100) | **bug fixed**: the range input used to clamp it, so "as shot" was not really as shot. The sliders now widen to include the file's value | `tests/unit/rawmode.test.ts` |
+| As-shot WB outside the web sliders (2000–12 000 K, tint ±100) | **bug fixed**: the range input used to clamp it (and snap it to the 50 K step), so "as shot" was not really as shot. The sliders now widen to include the file's value, up to the native limits, and the exact as-shot value is sent until a slider is moved | `tests/unit/rawmode.test.ts` |
 | Bayer vs ProRAW linearity | +1 EV gives ×2.0 on both (median over 28 657 and 25 849 px) | `testBayerAndProRAWAreBothSceneLinear` |
 | Apple rendering options | ProRAW supports local tone map, contrast, sharpness and detail; the Bayer DNG has no local tone map. All are held at 0 where supported | `testRenderingOptionsAreOffOnBothFileTypes` |
 

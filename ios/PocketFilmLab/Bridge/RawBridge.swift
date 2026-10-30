@@ -159,7 +159,13 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
                 // Idle work after the preview is out: get the WB fitter ready. Runs on
                 // the render queue, so it only delays a render that is already waiting. If it
                 // fails, the first WB change builds the fitter itself and reports the error.
-                if !session.isWhiteBalanceReady { self.queue.async { try? session.prepareWhiteBalance() } }
+                if session.needsWhiteBalancePrewarm {
+                    self.queue.async {
+                        // Skip if a newer render or another file is waiting.
+                        guard generation == self.currentGeneration(), self.currentSession() === session else { return }
+                        try? session.prepareWhiteBalance()
+                    }
+                }
             } catch {
                 DispatchQueue.main.async { reply(nil, error.localizedDescription) }
             }
@@ -168,6 +174,10 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
 
     private func currentGeneration() -> Int {
         DispatchQueue.main.sync { renderGeneration }
+    }
+
+    private func currentSession() -> RawSession? {
+        DispatchQueue.main.sync { session }
     }
 
     private func export(_ body: [String: Any], reply: @escaping (Any?, String?) -> Void) {

@@ -15,6 +15,7 @@ final class RawSession {
     private let engine: FilmEngine
     private var cached: (wb: WhiteBalance?, edge: CGFloat, image: CIImage)?
     private var fitter: WhiteBalanceMatrix.Fitter?
+    private var prewarmFailed = false
     private var wbMatrix: (from: WhiteBalance?, to: WhiteBalance?, m: [Float])?
 
     init(url: URL, engine: FilmEngine, fastWhiteBalance: Bool = true) throws {
@@ -64,11 +65,19 @@ final class RawSession {
     /// nothing if there is no preview yet or the fitter already exists.
     /// Call on the same queue as the renders.
     func prepareWhiteBalance() throws {
-        guard fastWhiteBalance, let c = cached, fitter == nil || fitter?.base != c.wb else { return }
-        fitter = try WhiteBalanceMatrix.Fitter(url: url, nativeSize: nativeSize, base: c.wb, context: engine.context)
+        guard needsWhiteBalancePrewarm, let c = cached else { return }
+        do {
+            fitter = try WhiteBalanceMatrix.Fitter(url: url, nativeSize: nativeSize, base: c.wb, context: engine.context)
+        } catch {
+            prewarmFailed = true // don't retry on every render; a real WB change still tries
+            throw error
+        }
     }
 
     var isWhiteBalanceReady: Bool { fitter != nil && fitter?.base == cached?.wb }
+    /// True when a pre-warm would do something: fast WB on, a preview cached, no fitter
+    /// for it yet, and no earlier pre-warm failure.
+    var needsWhiteBalancePrewarm: Bool { fastWhiteBalance && !prewarmFailed && cached != nil && !isWhiteBalanceReady }
 
     /// JPEG preview. `compare` gives the plain decode (no film look) for hold-to-compare.
     func previewJPEG(settings: FilmSettings, maxEdge: CGFloat, compare: Bool) throws -> Data {

@@ -88,9 +88,8 @@ final class TextureTests: XCTestCase {
         XCTAssertLessThan(sSmall, sBig)
     }
 
-    /// Halation: a bright spot gets a red-orange glow around it, mid tones far away are untouched.
     /// Softness: off changes nothing; on lowers fine-detail contrast but keeps the mean
-    /// level and greys neutral, and scales with image size like the other textures.
+    /// level and greys neutral.
     func testSoftnessIsGentleAndOffByDefault() throws {
         XCTAssertEqual(FilmSettings().softness, 0)
         // Checkerboard of two greys, 4-px squares, on a 4000 px canvas (sigma ~2.8 px).
@@ -121,6 +120,7 @@ final class TextureTests: XCTestCase {
         XCTAssertEqual(RawBridge.settings(from: ["softness": 7.0]).softness, 1)
     }
 
+    /// Halation: a bright spot gets a red-orange glow around it, mid tones far away are untouched.
     func testHalationIsRedOrangeAroundHighlights() throws {
         let size: CGFloat = 1000
         let bg = flat(0.09, size: size)

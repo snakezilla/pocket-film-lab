@@ -126,7 +126,7 @@ Not done / blockers:
 - Halation tint is unchanged, because no reference has clipped sources. Blue-sky desaturation was proposed but not applied (the two pairs disagree).
 - No real 48 MP iPhone ProRAW yet.
 
-## Phase 4 (2026-10-29 23:40 – 2026-10-30 00:20): edge cases, polish, final docs. DONE
+## Phase 4 (2026-10-29 23:40 – 2026-10-30 00:10): edge cases, polish, final docs. DONE
 
 The final report, with the honest fidelity summary and remaining gaps, is at the top of `measurements/RAW-REPORT.md`.
 
@@ -140,8 +140,9 @@ Done:
 - **WB fitter pre-warm** after the first preview. The first WB change went from 231–353 ms to 78–93 ms (phase-3 next step 3).
 - **Softness** (optional, off by default): a native setting, a bridge key and a RAW-only slider. **Gate weave was not built**: on a still it is only a sub-pixel shift.
 - **Pale-sky chroma trim** (`BLUE_HIGH_CHROMA` 0.7). Light and hazy blues go to ×0.72–0.83 chroma, while deep blues, skin and foliage are unchanged (`tools/probe_cube.py`). This settles phase-3 next step 1. The amount is the gentler measured pair; the ramp is judged.
+- **Code review fixes** (independent reviewer agent): a pre-warm that fails is no longer retried on every render, and it is skipped when a newer render or another file is waiting. The page sends the exact as-shot WB until a slider is moved, because a range input snaps 5201 K to 5200 K. Widened slider ranges stop at the native limits. A junk-input test could never fail; it is fixed. A timing assertion was replaced by a state check. A missing fixture now skips with a hint instead of failing in confusing ways.
 - **Docs:** a README "RAW mode (iOS app only)" section, the THIRD_PARTY_NOTICES stock list, the derived fixture in TEST-RAWS.md, and the final RAW-REPORT.md.
-- **Final test pass:** iOS **34/34** on the iPhone 17 Pro simulator, web `npm test` **39/39**, `npm run test:e2e` **12/12**.
+- **Final test pass:** iOS **34/34** on the iPhone 17 Pro simulator, web `npm test` **41/41**, `npm run test:e2e` **12/12**.
 
 Measured (simulator): see RAW-REPORT "Final numbers". 47 MP preview path +34 MB, export +208 MB / 4.9 s with texture, slider median 14 ms, bridge drag median 21 ms.
 

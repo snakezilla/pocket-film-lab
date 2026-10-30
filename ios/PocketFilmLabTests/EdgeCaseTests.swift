@@ -9,8 +9,8 @@ final class EdgeCaseTests: XCTestCase {
     static let bayerRotated = TestData.dir.appendingPathComponent("iphonexs-bayer-rot8.dng")
 
     override func setUpWithError() throws {
-        for url in [TestData.proRAW, TestData.bayer, Self.bayerRotated] {
-            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), "Run tools/fetch_test_raws.sh first: \(url.lastPathComponent)")
+        for url in [TestData.proRAW, TestData.bayer, Self.bayerRotated] where !FileManager.default.fileExists(atPath: url.path) {
+            throw XCTSkip("Run tools/fetch_test_raws.sh first (needs exiftool): \(url.lastPathComponent)")
         }
     }
 
@@ -114,11 +114,10 @@ final class EdgeCaseTests: XCTestCase {
         XCTAssertEqual(low.whiteBalance, WhiteBalance(temperature: 1800, tint: -150))
         let high = RawBridge.settings(from: ["wbTemp": 1e9, "wbTint": 9999.0])
         XCTAssertEqual(high.whiteBalance, WhiteBalance(temperature: 50_000, tint: 150))
-        let junk = RawBridge.settings(from: ["wbTemp": "warm", "wbTint": Double.nan])
-        if let wb = junk.whiteBalance {
-            XCTAssertTrue(wb.temperature.isFinite && wb.tint.isFinite)
-            XCTAssertTrue((1800...50_000).contains(wb.temperature) && (-150...150).contains(wb.tint))
-        }
+        // Not a number: as-shot (nil). NaN: that value falls back to its default.
+        XCTAssertNil(RawBridge.settings(from: ["wbTemp": "warm", "wbTint": 5.0]).whiteBalance)
+        XCTAssertEqual(RawBridge.settings(from: ["wbTemp": Double.nan, "wbTint": 5.0]).whiteBalance,
+                       WhiteBalance(temperature: 6500, tint: 5))
     }
 
     // MARK: Bayer vs ProRAW
