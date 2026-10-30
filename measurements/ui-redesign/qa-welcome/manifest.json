@@ -1,0 +1,188 @@
+[
+ {
+  "viewport": 320,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "320 light",
+  "file": "320-light.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "contrast": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 320,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "320 dark",
+  "file": "320-dark.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 390,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "390 light",
+  "file": "390-light.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "contrast": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 390,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "390 dark",
+  "file": "390-dark.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 768,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "768 light",
+  "file": "768-light.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "contrast": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 768,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "768 dark",
+  "file": "768-dark.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 1024,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "1024 light",
+  "file": "1024-light.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "contrast": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 1024,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "1024 dark",
+  "file": "1024-dark.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 1440,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "1440 light",
+  "file": "1440-light.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "contrast": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 1440,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "1440 dark",
+  "file": "1440-dark.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 390,
+  "scheme": "light",
+  "reduced": true,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "390 light reduced-motion",
+  "file": "390-light-reduced-motion.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "contrast": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 390,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": true,
+  "no_js": false,
+  "label": "390 light no-webfonts",
+  "file": "390-light-no-webfonts.png",
+  "console_errors": [],
+  "checks_summary": {
+   "img-size": 1,
+   "contrast": 1,
+   "meta": 4
+  }
+ },
+ {
+  "viewport": 390,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": true,
+  "label": "390 light no-js",
+  "file": "390-light-no-js.png",
+  "console_errors": [],
+  "checks_summary": {}
+ }
+]

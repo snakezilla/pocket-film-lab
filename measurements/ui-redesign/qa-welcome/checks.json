@@ -1,0 +1,694 @@
+[
+ {
+  "viewport": 320,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "320 light",
+  "file": "320-light.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 320,
+    "h": 568,
+    "dpr": 2
+   },
+   "scheme": "light",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "contrast": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "contrast",
+     "detail": "#ffffff on #c25e22 small: 4.27:1 (needs 4.5:1), 1 element(s), smallest 17px, e.g.",
+     "selector": "button#pick.btn.btn-primary \"Choose Photos\""
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 320,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "320 dark",
+  "file": "320-dark.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 320,
+    "h": 568,
+    "dpr": 2
+   },
+   "scheme": "dark",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 390,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "390 light",
+  "file": "390-light.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 390,
+    "h": 844,
+    "dpr": 2
+   },
+   "scheme": "light",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "contrast": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "contrast",
+     "detail": "#ffffff on #c25e22 small: 4.27:1 (needs 4.5:1), 1 element(s), smallest 17px, e.g.",
+     "selector": "button#pick.btn.btn-primary \"Choose Photos\""
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 390,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "390 dark",
+  "file": "390-dark.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 390,
+    "h": 844,
+    "dpr": 2
+   },
+   "scheme": "dark",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 768,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "768 light",
+  "file": "768-light.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 768,
+    "h": 1024,
+    "dpr": 2
+   },
+   "scheme": "light",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "contrast": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "contrast",
+     "detail": "#ffffff on #c25e22 small: 4.27:1 (needs 4.5:1), 1 element(s), smallest 17px, e.g.",
+     "selector": "button#pick.btn.btn-primary \"Choose Photos\""
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 768,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "768 dark",
+  "file": "768-dark.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 768,
+    "h": 1024,
+    "dpr": 2
+   },
+   "scheme": "dark",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 1024,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "1024 light",
+  "file": "1024-light.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 1024,
+    "h": 768,
+    "dpr": 2
+   },
+   "scheme": "light",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "contrast": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "contrast",
+     "detail": "#ffffff on #c25e22 small: 4.27:1 (needs 4.5:1), 1 element(s), smallest 17px, e.g.",
+     "selector": "button#pick.btn.btn-primary \"Choose Photos\""
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 1024,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "1024 dark",
+  "file": "1024-dark.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 1024,
+    "h": 768,
+    "dpr": 2
+   },
+   "scheme": "dark",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 1440,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "1440 light",
+  "file": "1440-light.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 1440,
+    "h": 900,
+    "dpr": 2
+   },
+   "scheme": "light",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "contrast": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "contrast",
+     "detail": "#ffffff on #c25e22 small: 4.27:1 (needs 4.5:1), 1 element(s), smallest 17px, e.g.",
+     "selector": "button#pick.btn.btn-primary \"Choose Photos\""
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 1440,
+  "scheme": "dark",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "1440 dark",
+  "file": "1440-dark.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 1440,
+    "h": 900,
+    "dpr": 2
+   },
+   "scheme": "dark",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 390,
+  "scheme": "light",
+  "reduced": true,
+  "block_fonts": false,
+  "no_js": false,
+  "label": "390 light reduced-motion",
+  "file": "390-light-reduced-motion.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 390,
+    "h": 844,
+    "dpr": 2
+   },
+   "scheme": "light",
+   "theme": null,
+   "reducedMotion": true,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "contrast": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "contrast",
+     "detail": "#ffffff on #c25e22 small: 4.27:1 (needs 4.5:1), 1 element(s), smallest 17px, e.g.",
+     "selector": "button#pick.btn.btn-primary \"Choose Photos\""
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 390,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": true,
+  "no_js": false,
+  "label": "390 light no-webfonts",
+  "file": "390-light-no-webfonts.png",
+  "checks": {
+   "url": "http://127.0.0.1:4319/",
+   "viewport": {
+    "w": 390,
+    "h": 844,
+    "dpr": 2
+   },
+   "scheme": "light",
+   "theme": null,
+   "reducedMotion": false,
+   "title": "Film Lab",
+   "summary": {
+    "img-size": 1,
+    "contrast": 1,
+    "meta": 4
+   },
+   "findings": [
+    {
+     "check": "img-size",
+     "detail": "no width/height attributes, layout will shift when it loads",
+     "selector": "img#view"
+    },
+    {
+     "check": "contrast",
+     "detail": "#ffffff on #c25e22 small: 4.27:1 (needs 4.5:1), 1 element(s), smallest 17px, e.g.",
+     "selector": "button#pick.btn.btn-primary \"Choose Photos\""
+    },
+    {
+     "check": "meta",
+     "detail": "no <meta name=\"description\">; link previews will show nothing or random body text",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:title; chat apps fall back to a bare link",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no og:image; the preview card will have no picture",
+     "selector": null
+    },
+    {
+     "check": "meta",
+     "detail": "no favicon link",
+     "selector": null
+    }
+   ]
+  },
+  "console_errors": []
+ },
+ {
+  "viewport": 390,
+  "scheme": "light",
+  "reduced": false,
+  "block_fonts": false,
+  "no_js": true,
+  "label": "390 light no-js",
+  "file": "390-light-no-js.png",
+  "checks": {
+   "summary": {},
+   "findings": []
+  },
+  "console_errors": []
+ }
+]
