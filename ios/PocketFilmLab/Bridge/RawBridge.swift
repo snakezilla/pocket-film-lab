@@ -194,12 +194,14 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         let compare = body["compare"] as? Bool ?? false
         let hero = body["hero"] as? Bool ?? true
         let edge = CGFloat(min(max(body["maxEdge"] as? Double ?? 1600, 320), 2048))
-        let generation = (renderGeneration[id] ?? 0) + 1
-        renderGeneration[id] = generation
+        // Film and compare renders are counted apart: holding compare must not drop a film render.
+        let slot = compare ? "\(id)#orig" : id
+        let generation = (renderGeneration[slot] ?? 0) + 1
+        renderGeneration[slot] = generation
         let epoch = epoch
         queue.async {
             // A newer request for this photo is already queued: skip this one so slider drags don't pile up.
-            guard self.onMain({ self.epoch == epoch && self.renderGeneration[id] == generation }) else {
+            guard self.onMain({ self.epoch == epoch && self.renderGeneration[slot] == generation }) else {
                 DispatchQueue.main.async { reply(["stale": true], nil) }
                 return
             }
@@ -218,7 +220,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
                     let url = PreviewStore.shared.put(jpeg, key: "\(id)-\(compare ? "orig" : "film")")
                     reply(["url": url, "ms": ms, "info": info], nil)
                 }
-                self.prewarm(session, id: id, generation: generation, epoch: epoch)
+                self.prewarm(session, id: id, slot: slot, generation: generation, epoch: epoch)
             } catch {
                 DispatchQueue.main.async { reply(nil, error.localizedDescription) }
             }
@@ -228,11 +230,11 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
     /// Idle work after a preview is out: get the WB fitter ready. Runs on the render
     /// queue, so it only delays a render that is already waiting. If it fails, the first
     /// WB change builds the fitter itself and reports the error.
-    private func prewarm(_ session: RawSession, id: String, generation: Int, epoch: Int) {
+    private func prewarm(_ session: RawSession, id: String, slot: String, generation: Int, epoch: Int) {
         guard session.needsWhiteBalancePrewarm else { return }
         queue.async {
             // Skip if a newer render for this photo, or another batch, is waiting.
-            guard self.onMain({ self.epoch == epoch && self.renderGeneration[id] == generation }),
+            guard self.onMain({ self.epoch == epoch && self.renderGeneration[slot] == generation }),
                   self.sessions.existing(id: id) === session else { return }
             try? session.prepareWhiteBalance()
         }
