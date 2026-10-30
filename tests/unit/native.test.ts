@@ -30,4 +30,16 @@ describe('native RAW bridge client', () => {
     expect(postMessage).toHaveBeenLastCalledWith({ cmd: 'render', settings, compare: false, maxEdge: 1600 })
     await expect(bridge!.exportFile(settings, 'heic')).rejects.toThrow('boom')
   })
+
+  it('tells a RAW apart from a JPEG/PNG fallback', async () => {
+    const replies: unknown[] = [
+      { name: 'a.dng', width: 4032, height: 3024, wbTemp: 5200, wbTint: 6 },
+      { fallback: { url: 'app://local/__raw/p2.png', name: 'b.png' } },
+    ]
+    const postMessage = vi.fn(async () => replies.shift())
+    g.window = { webkit: { messageHandlers: { raw: { postMessage } } } }
+    const bridge = nativeRaw()!
+    expect(await bridge.open('files')).toEqual({ raw: { name: 'a.dng', width: 4032, height: 3024, wbTemp: 5200, wbTint: 6 } })
+    expect(await bridge.open('photos')).toEqual({ photo: { url: 'app://local/__raw/p2.png', name: 'b.png' } })
+  })
 })

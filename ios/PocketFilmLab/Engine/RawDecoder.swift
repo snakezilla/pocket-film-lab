@@ -48,7 +48,8 @@ struct RawDecoder {
         return image.settingProperties([:])
     }
 
-    private func makeFilter(scale: Float, exposure: Float, whiteBalance: WhiteBalance?) throws -> CIRAWFilter {
+    /// A configured filter. `WhiteBalanceMatrix` keeps one alive and only changes its WB.
+    func makeFilter(scale: Float, exposure: Float, whiteBalance: WhiteBalance?) throws -> CIRAWFilter {
         guard let filter = CIRAWFilter(imageURL: url) else { throw RawDecodeError.unsupported(url) }
         filter.scaleFactor = min(max(scale, 0.01), 1)
         filter.exposure = exposure

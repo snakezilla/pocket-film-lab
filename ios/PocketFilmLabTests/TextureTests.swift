@@ -28,8 +28,7 @@ final class TextureTests: XCTestCase {
                 var s = FilmSettings(); s.lookID = id
                 let out = try engine.applyFilm(to: flat(v, size: 4), settings: s)
                 let px = Pixels.floats(out, context: engine.context)
-                let spread = max(px[0], px[1], px[2]) - min(px[0], px[1], px[2])
-                XCTAssertLessThan(spread, max(0.01 * px[1], 0.0005), "\(id) stop \(stop): \(px[0..<3])")
+                assertGreyOrWarmHighlight(px[0], px[1], px[2], "\(id) stop \(stop)")
             }
         }
     }

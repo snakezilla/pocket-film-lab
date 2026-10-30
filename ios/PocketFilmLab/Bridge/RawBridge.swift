@@ -9,6 +9,7 @@ import WebKit
 /// Messages (all reply with a JSON object, or an error string):
 ///   {cmd: "looks"}                         -> {looks: [{id, label}]}
 ///   {cmd: "open", source: "photos"|"files"} -> {name, width, height, wbTemp, wbTint} or {cancelled: true}
+///                                             or {fallback: {url, name}} for a JPEG/PNG/HEIC (web path)
 ///   {cmd: "render", settings, compare?}     -> {url, ms, width, height} or {stale: true}
 ///   {cmd: "export", settings, format}       -> {shared: Bool, ms}
 final class RawBridge: NSObject {
@@ -62,7 +63,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
             self.startSession(url: url, reply: reply)
         }
         if source == "files" {
-            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.rawImage], asCopy: true)
+            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.rawImage, .jpeg, .png, .heic, .heif], asCopy: true)
             picker.delegate = self
             presenter.present(picker, animated: true)
         } else {
@@ -79,6 +80,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
     /// Opens a RAW file we own (already copied). Also the entry point for tests.
     func startSession(url: URL, reply: @escaping (Any?, String?) -> Void) {
         queue.async {
+            guard FallbackImage.isRaw(url) else { return self.handOff(url, reply: reply) }
             do {
                 let session = try RawSession(url: url, engine: self.engine)
                 DispatchQueue.main.async {
@@ -94,6 +96,20 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
             } catch {
                 DispatchQueue.main.async { reply(nil, error.localizedDescription) }
             }
+        }
+    }
+
+    /// Not RAW: serve the photo to the page, which develops it on its JPEG/PNG path.
+    private func handOff(_ url: URL, reply: @escaping (Any?, String?) -> Void) {
+        do {
+            let (data, name) = try FallbackImage.prepare(url, context: engine.context)
+            let served = PreviewStore.shared.put(data, ext: name.lowercased().hasSuffix(".png") ? "png" : "jpg")
+            DispatchQueue.main.async {
+                self.session = nil
+                reply(["fallback": ["url": served, "name": name]], nil)
+            }
+        } catch {
+            DispatchQueue.main.async { reply(nil, error.localizedDescription) }
         }
     }
 
@@ -206,11 +222,13 @@ extension RawBridge: PHPickerViewControllerDelegate {
     func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
         picker.dismiss(animated: true)
         guard let provider = results.first?.itemProvider else { finishOpen(nil); return }
-        let type = provider.registeredTypeIdentifiers
-            .compactMap(UTType.init)
-            .first { $0.conforms(to: .rawImage) }
+        let types = provider.registeredTypeIdentifiers.compactMap(UTType.init)
+        // RAW first; otherwise the photo's own JPEG/PNG/HEIC goes to the web path.
+        let type = types.first { $0.conforms(to: .rawImage) }
+            ?? types.first { $0.conforms(to: .jpeg) || $0.conforms(to: .png) || $0.conforms(to: .heic) || $0.conforms(to: .heif) }
+            ?? types.first { $0.conforms(to: .image) }
         guard let type else {
-            return failOpen("That photo has no RAW version. Pick a ProRAW or DNG photo.")
+            return failOpen("That item is not a photo.")
         }
         provider.loadFileRepresentation(forTypeIdentifier: type.identifier) { [weak self] url, _ in
             let copy = url.flatMap { self?.adopt($0) }

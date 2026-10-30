@@ -1,6 +1,6 @@
 import Foundation
 
-/// In-memory previews served to the web page at app://local/__raw/<name>.jpg,
+/// In-memory previews served to the web page at app://local/__raw/<name>.jpg (or .png),
 /// so preview images never round-trip through base64. Keeps only the newest few.
 final class PreviewStore {
     static let shared = PreviewStore()
@@ -9,10 +9,11 @@ final class PreviewStore {
     private var items: [(name: String, data: Data)] = []
     private var counter = 0
 
-    func put(_ data: Data) -> String {
+    /// `ext` sets the MIME type the scheme handler serves (jpg or png).
+    func put(_ data: Data, ext: String = "jpg") -> String {
         lock.lock(); defer { lock.unlock() }
         counter += 1
-        let name = "p\(counter).jpg"
+        let name = "p\(counter).\(ext)"
         items = Array((items + [(name, data)]).suffix(6))
         return "app://local\(Self.pathPrefix)\(name)"
     }

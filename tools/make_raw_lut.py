@@ -77,6 +77,22 @@ CHROMA_HIGH_Y = 0.6    # ~L* 82
 BLACK_LIFT = 0.001
 CHROMA_SHADOW_Y = 0.01 # below this the scale eases back toward 1 (film already desaturates)
 
+# Second tuning pass (phase 3), against the two before/after pairs in LOOK-TRAITS.md.
+# Warm highlights. Measured: near-neutral highlights sit at b* +8 to +11, a* -1 to -3 in 8 of
+# 9 reference outputs, and both pairs shift them by +10 b* or more. Gains on display-linear
+# RGB at constant luminance, about b* +8 / a* -1.5 at full strength. The ramp position is
+# measured (the tint is already strong at L* 76); the smoothstep shape is judged.
+# Greys below HIGHLIGHT_WARM_Y0 (about +1 stop) stay neutral.
+HIGHLIGHT_WARM = (1.037, 1.0051, 0.84)  # R, G, B gains at full strength (G keeps Y)
+HIGHLIGHT_WARM_Y0 = 0.36                # display Y, L* 66
+HIGHLIGHT_WARM_Y1 = 0.64                # display Y, L* 84
+# Toe. Measured direction: both pairs keep the very bottom lifted but are ~21-25 codes darker
+# at p25 than the phone render; ours is ~31 darker than our plain render, so slightly too
+# dense. The size (+0.16 stop at code ~32) is a weak estimate: exposure is unknown in both.
+TOE_LIFT = 1.12        # gain on display Y at TOE_PEAK_Y
+TOE_PEAK_Y = 0.015     # sRGB code ~32
+TOE_LOW_Y, TOE_HIGH_Y = 0.004, 0.08  # the gain eases back to 1 at these (log-space smoothstep)
+
 
 def shaper_decode(s):
     return MID_GREY * np.exp2(LOG_MIN + s * (LOG_MAX - LOG_MIN))
@@ -151,9 +167,28 @@ def chroma_scale(y):
     return 1 + (k - 1) * shadow
 
 
+def smoothstep(x, lo, hi):
+    t = np.clip((x - lo) / (hi - lo), 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def toe_gain(y):
+    """Gain bump on display Y: 1 outside TOE_LOW_Y..TOE_HIGH_Y, TOE_LIFT at TOE_PEAK_Y."""
+    ly = np.log2(np.maximum(y, 1e-6))
+    up = smoothstep(ly, np.log2(TOE_LOW_Y), np.log2(TOE_PEAK_Y))
+    down = 1 - smoothstep(ly, np.log2(TOE_PEAK_Y), np.log2(TOE_HIGH_Y))
+    return 1 + (TOE_LIFT - 1) * np.minimum(up, down)
+
+
+def warm_gains(y):
+    w = smoothstep(y, HIGHLIGHT_WARM_Y0, HIGHLIGHT_WARM_Y1)[..., None]
+    return 1 + (np.array(HIGHLIGHT_WARM) - 1) * w
+
+
 def grade(table):
     y = luminance(table)[..., None]
     graded = np.clip(y + (table - y) * chroma_scale(y[..., 0])[..., None], 0, 1)
+    graded = np.clip(graded * toe_gain(y[..., 0])[..., None] * warm_gains(y[..., 0]), 0, 1)
     return BLACK_LIFT + graded * (1 - BLACK_LIFT)
 
 
@@ -222,7 +257,9 @@ def main():
             "targetMidOut": TARGET_MID_OUT,
             "source": "spectral-film-lut 0.18.0 (MIT, Jan Lohse)",
             "greyRampStops": [int(x) for x in stops],
-            "grade": {"blackLift": BLACK_LIFT, "chromaMid": CHROMA_MID, "chromaHigh": CHROMA_HIGH, "chromaHighY": CHROMA_HIGH_Y},
+            "grade": {"blackLift": BLACK_LIFT, "chromaMid": CHROMA_MID, "chromaHigh": CHROMA_HIGH, "chromaHighY": CHROMA_HIGH_Y,
+                      "toeLift": TOE_LIFT, "toePeakY": TOE_PEAK_Y, "highlightWarm": list(HIGHLIGHT_WARM),
+                      "highlightWarmY": [HIGHLIGHT_WARM_Y0, HIGHLIGHT_WARM_Y1]},
             "chromaReport": report,
             "greyRampOutLinear": [[round(float(c), 6) for c in row] for row in exact],
         }

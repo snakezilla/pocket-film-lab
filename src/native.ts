@@ -17,6 +17,14 @@ export interface RawInfo {
   readonly wbTint: number
 }
 
+/** A picked photo that is not RAW. The page develops it on its own JPEG/PNG path. */
+export interface FallbackPhoto {
+  readonly url: string
+  readonly name: string
+}
+
+export type OpenResult = { readonly raw: RawInfo } | { readonly photo: FallbackPhoto } | null
+
 export interface RawSettings {
   readonly look: string
   readonly strength: number
@@ -35,7 +43,7 @@ interface Handler {
 
 export interface NativeRaw {
   looks(): Promise<readonly NativeLook[]>
-  open(source: 'photos' | 'files'): Promise<RawInfo | null>
+  open(source: 'photos' | 'files'): Promise<OpenResult>
   render(settings: RawSettings, compare: boolean, maxEdge: number): Promise<RenderResult>
   exportFile(settings: RawSettings, format: 'heic' | 'jpeg'): Promise<{ readonly shared: boolean; readonly ms: number }>
 }
@@ -58,8 +66,9 @@ export function nativeRaw(): NativeRaw | null {
   return {
     looks: async () => (await call<{ looks: NativeLook[] }>({ cmd: 'looks' })).looks,
     open: async (source) => {
-      const res = await call<RawInfo | { cancelled: true }>({ cmd: 'open', source })
-      return 'cancelled' in res ? null : res
+      const res = await call<RawInfo | { cancelled: true } | { fallback: FallbackPhoto }>({ cmd: 'open', source })
+      if ('cancelled' in res) return null
+      return 'fallback' in res ? { photo: res.fallback } : { raw: res }
     },
     render: (settings, compare, maxEdge) => call<RenderResult>({ cmd: 'render', settings, compare, maxEdge }),
     exportFile: (settings, format) => call({ cmd: 'export', settings, format }),

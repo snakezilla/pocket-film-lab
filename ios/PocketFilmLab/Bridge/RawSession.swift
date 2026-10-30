@@ -3,16 +3,24 @@ import Foundation
 
 /// One opened RAW file. Keeps a reduced-size scene-linear decode in memory so
 /// slider changes only re-run the film look, not the RAW decode.
+///
+/// With `fastWhiteBalance` (the default), a white balance change keeps that decode
+/// and applies a fitted 3x3 matrix (`WhiteBalanceMatrix`) instead of decoding again.
+/// Export always decodes at the chosen white balance.
 final class RawSession {
     let url: URL
     let asShot: WhiteBalance
     let nativeSize: CGSize
+    let fastWhiteBalance: Bool
     private let engine: FilmEngine
     private var cached: (wb: WhiteBalance?, edge: CGFloat, image: CIImage)?
+    private var fitter: WhiteBalanceMatrix.Fitter?
+    private var wbMatrix: (from: WhiteBalance?, to: WhiteBalance?, m: [Float])?
 
-    init(url: URL, engine: FilmEngine) throws {
+    init(url: URL, engine: FilmEngine, fastWhiteBalance: Bool = true) throws {
         self.url = url
         self.engine = engine
+        self.fastWhiteBalance = fastWhiteBalance
         let decoder = RawDecoder(url: url)
         asShot = try decoder.asShotWhiteBalance()
         nativeSize = try decoder.nativeSize()
@@ -20,7 +28,10 @@ final class RawSession {
 
     /// Scene-linear preview decode, rendered once per white balance into a half-float buffer.
     private func linearPreview(wb: WhiteBalance?, maxEdge: CGFloat) throws -> CIImage {
-        if let c = cached, c.wb == wb, c.edge == maxEdge { return c.image }
+        if let c = cached, c.edge == maxEdge {
+            if c.wb == wb { return c.image }
+            if fastWhiteBalance { return WhiteBalanceMatrix.apply(try matrix(from: c.wb, to: wb), to: c.image) }
+        }
         let longEdge = max(nativeSize.width, nativeSize.height)
         let scale = Float(min(1, maxEdge / longEdge))
         let lazy = try RawDecoder(url: url).decode(scale: scale, whiteBalance: wb)
@@ -36,6 +47,16 @@ final class RawSession {
                             format: .RGBAh, colorSpace: linear)
         cached = (wb, maxEdge, image)
         return image
+    }
+
+    private func matrix(from: WhiteBalance?, to: WhiteBalance?) throws -> [Float] {
+        if let w = wbMatrix, w.from == from, w.to == to { return w.m }
+        if fitter == nil || fitter?.base != from {
+            fitter = try WhiteBalanceMatrix.Fitter(url: url, nativeSize: nativeSize, base: from, context: engine.context)
+        }
+        let m = try fitter!.matrix(to: to ?? asShot)
+        wbMatrix = (from, to, m)
+        return m
     }
 
     /// JPEG preview. `compare` gives the plain decode (no film look) for hold-to-compare.

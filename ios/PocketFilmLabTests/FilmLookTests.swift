@@ -30,9 +30,7 @@ final class FilmLookTests: XCTestCase {
         let px = Pixels.floats(out, context: engine.context)
         for (i, stop) in stops.enumerated() {
             let r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2]
-            let spread = max(r, g, b) - min(r, g, b)
-            // Within 1% of the value, or 0.0005 absolute in deep shadow.
-            XCTAssertLessThan(spread, max(0.01 * g, 0.0005), "stop \(stop): \(r) \(g) \(b)")
+            assertGreyOrWarmHighlight(r, g, b, "stop \(stop)")
         }
     }
 
@@ -92,5 +90,20 @@ final class FilmLookTests: XCTestCase {
         let out = Pixels.floats(try engine.applyFilm(to: green, settings: FilmSettings()), context: engine.context)
         let inRatio: Float = 0.05 / 0.25, outRatio = out[0] / out[1]
         XCTAssertGreaterThan(abs(outRatio - inRatio), 0.01, "film cube looks tone-only: \(out[0...2])")
+    }
+}
+
+/// Greys up to about +1 stop (display Y < 0.36) stay neutral within 1% (or 0.0005 in deep
+/// shadow). Above that the print warms near-whites on purpose (make_raw_lut.py,
+/// HIGHLIGHT_WARM, tuning pass 2): R >= G >= B, with B no lower than 0.8 x G (about b* +9).
+func assertGreyOrWarmHighlight(_ r: Float, _ g: Float, _ b: Float, _ label: String, file: StaticString = #filePath, line: UInt = #line) {
+    if g < 0.34 {
+        let spread = max(r, g, b) - min(r, g, b)
+        XCTAssertLessThan(spread, max(0.01 * g, 0.0005), "\(label): \(r) \(g) \(b)", file: file, line: line)
+    } else {
+        XCTAssertGreaterThanOrEqual(r, g * 0.999, "\(label) highlight not warm: \(r) \(g) \(b)", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(g, b, "\(label) highlight not warm: \(r) \(g) \(b)", file: file, line: line)
+        XCTAssertGreaterThan(b / g, 0.8, "\(label) highlight too yellow: \(r) \(g) \(b)", file: file, line: line)
+        XCTAssertLessThan(r / g, 1.05, "\(label) highlight too red: \(r) \(g) \(b)", file: file, line: line)
     }
 }

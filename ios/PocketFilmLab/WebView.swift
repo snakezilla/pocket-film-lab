@@ -86,7 +86,7 @@ final class BundleSchemeHandler: NSObject, WKURLSchemeHandler {
         guard let url = task.request.url else { return }
         let path = url.path.isEmpty || url.path == "/" ? "/index.html" : url.path
         if let preview = PreviewStore.shared.get(path: path) {
-            respond(task, url: url, data: preview, mime: "image/jpeg")
+            respond(task, url: url, data: preview, mime: path.hasSuffix(".png") ? "image/png" : "image/jpeg")
             return
         }
         let file = root.appendingPathComponent(path).standardizedFileURL

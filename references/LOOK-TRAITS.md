@@ -194,3 +194,87 @@ Our numbers come from `tools/make_raw_lut.py` (its chroma report, which uses ran
 | Highlight tint | warm cream, b* +6 to +9 | neutral (greys held neutral by design and by test) | **not done** | an open decision, see PROGRESS.md |
 | Shadow tint | 0 to −3 b* | neutral | close enough | — |
 | Shadow density | p25 about −20 codes vs an iPhone render | p25 −31 vs our *plain* render (ProRAW sample) | possibly too dense | not tuned yet. Our plain render is not an iPhone render, so this comparison is weak |
+
+## Tuning pass 2 (phase 3): cakesauce pair + new outputs
+
+Measured on 2026-10-29 (phase 3) from the images the assistant account posted on issue #7. All copies are in `references/local/` (gitignored). The script is the same, `tools/measure_refs.py`, which now has 6 more sources and a region-split pair compare (`REGION_PAIRS`). The app's exports carry a 1 px dark border, so the crops drop 2 px on each side.
+
+| Label | File | Weight |
+|---|---|---|
+| cake_after | x_cakesauce_2115693910458781996_chromagraph_2048x1422.jpg | high for relative tone/colour (second before/after pair), low for absolutes |
+| cake_before_original | x_cakesauce_2115694195583451349_original_2048x1536.jpg | baseline only. The author labels it "originals"; it is probably the stock iPhone render |
+| dmcg_interior | x_dmcgco_2115886480962847174_chromagraph_1536x2048.jpg | medium (sunlit interior, 2048 px) |
+| ns_beach / ns_harbour / ns_building | Newsshooter webp, 740 px | low (small, re-compressed) |
+
+The cakesauce pair is **not pixel-aligned**: different framing (the person moved, horizon at 40% vs 49% of the height) and different aspect ratio. I did not try to register it. Everything below is distribution-based, for the whole frame and for a sky band and a land band cut at the horizon (`REGION_PAIRS`).
+
+### Black level and shoulder (measured)
+
+| Image | p0.5 | p1 | p5 | p50 | p99 | p99.5 | max Y | min channel p0.5 (R,G,B) |
+|---|---|---|---|---|---|---|---|---|
+| cake_after | 29.8 | 34.2 | 51.3 | 115.8 | 195.8 | 198.8 | 209.3 | 40, 25, 19 |
+| cake_before_original | 22.4 | 29.9 | 55.9 | 149.1 | 217.3 | 220.7 | 255.0 | 35, 17, 6 |
+| dmcg_interior | 9.4 | 12.4 | 23.5 | 83.8 | 229.6 | 231.4 | 240.2 | 8, 9, 5 |
+| ns_beach | 14.5 | 17.0 | 28.0 | 91.8 | 225.0 | 230.7 | 241.6 | 7, 15, 22 |
+| ns_harbour | 4.7 | 5.3 | 9.6 | 71.6 | 214.0 | 217.8 | 239.8 | 2, 5, 7 |
+| ns_building | 3.9 | 4.6 | 6.4 | 24.0 | 136.8 | 139.2 | 159.1 | 1, 4, 7 |
+
+The desert scene has no real blacks (its darkest pixels are shadowed earth), so its floor is not a black level.
+
+Quantile map, Y codes, iPhone → Chromagraph (measured):
+
+| q | 1 | 5 | 10 | 25 | 50 | 75 | 90 | 95 | 99 | 99.5 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| cake, whole frame | 29.9 → 34.2 | 55.9 → 51.3 | 75.4 → 65.1 | 118.2 → 93.7 | 149.1 → 115.8 | 186.7 → 174.4 | 196.1 → 182.2 | 203.6 → 186.6 | 217.3 → 195.8 | 220.7 → 198.8 |
+| cake, land only | 23.3 → 30.8 | 46.0 → 44.9 | 61.0 → 56.2 | 92.1 → 80.1 | 122.1 → 99.9 | 139.9 → 110.5 | 153.1 → 117.4 | 161.8 → 121.3 | 182.8 → 131.2 | 193.4 → 139.5 |
+| cake, sky only | 123.4 → 143.3 | 132.1 → 150.5 | 140.1 → 156.9 | 164.7 → 171.2 | 186.4 → 177.6 | 194.6 → 182.9 | 204.6 → 188.4 | 210.6 → 192.0 | 220.7 → 199.8 | 223.8 → 200.8 |
+| mezha1 (phase 2, for comparison) | 3.6 → 8.4 | 18.8 → 14.6 | 30.5 → 18.7 | 46.7 → 25.5 | 69.3 → 38.8 | 142.1 → 106.6 | 212.7 → 190.4 | 235.6 → 207.5 | 250.9 → 225.8 | 252.7 → 229.8 |
+
+Reading:
+- **Measured, both pairs agree:** the very bottom is lifted (p1 +4 to +8 codes), then everything from p5 to p50 is darker (p25 −21 to −25 codes, p50 −30 to −33). Part of the darkening is probably exposure (the whole cake frame sits lower, and its median land drops 22 codes), which we cannot separate from the curve.
+- **Measured:** the sky is compressed into a narrow band: its 1-99% range goes from 97 codes wide to 57. The darkest sky is lifted (+20) and the brightest pulled down (−21). That is a strong, soft shoulder plus flattening of sky contrast.
+- **Measured:** the output never clips in the new samples: max Y is 209-242 and p99.5 is 199-231. This matches the phase-2 shoulder target (ceiling about 235-240).
+- **Measured:** black floors of the output-only images: 3.9 to 14.5 codes (p0.5). Pooled with phase 2, the median floor of all reference outputs with real blacks is about code 5. The phase-2 target (4-6) still holds.
+
+### Colour (measured)
+
+| Image | shadow a\*, b\* (L\*) | highlight a\*, b\* (L\*) | C\* L40-60 → L70-90 (ratio) |
+|---|---|---|---|
+| cake_after | +4.4, +5.7 (23) | −2.7, **+10.6** (78) | 21.7 → 10.8 (0.50) |
+| cake_before_original | +4.5, +6.7 (18) | −1.3, **−7.2** (86) | 18.4 → 10.5 (0.57) |
+| dmcg_interior | +0.9, +0.5 (5) | −1.1, **+9.6** (76) | 14.0 → 16.9 (1.2, warm wood and walls) |
+| ns_beach | −0.7, **−5.7** (8) | −1.2, **+8.6** (59) | 15.0 → 17.3 (1.15, cream clouds) |
+| ns_harbour | −0.2, −1.4 (2) | −2.1, **+8.3** (84) | 10.7 → 9.6 (0.9) |
+| ns_building | −0.3, −1.7 (2) | −4.0, −4.5 (53, still mid-tone: no real highlights) | — |
+
+Cake regions (mean over the band):
+
+| Region | iPhone L\*, a\*, b\*, C\*, hue | Chromagraph L\*, a\*, b\*, C\*, hue | chroma ratio |
+|---|---|---|---|
+| Sky | 73.0, −0.4, −13.7, 13.7, 268° | 71.7, −4.8, **+6.9**, 9.4, 125° | 0.68 |
+| Land | 47.8, +7.5, +15.6, 17.7, 64.5° | 39.4, +10.2, +18.4, 21.3, 61.1° | **1.20** |
+
+Reading:
+- **Measured, the strongest result of this pass:** near-white highlights are warm cream in every output with real highlights, now 8 of 9: b\* +8.3 to +10.6 in the new images (a\* −1 to −3, slightly green-yellow, not orange). In the cakesauce pair the near-neutral highlights move from b\* −7.2 to +10.6 (+17.8), and in mezha1 by +10.3.
+- **Measured:** a pale blue daylight sky does not stay blue. It crosses neutral to a pale cream/green-grey (b\* −13.7 → +6.9, C\* ×0.68). In mezha1 the sky lost all its chroma. The Newsshooter skies that do stay blue are darker (L\* 35-42, h 239-248°, C\* 8-14).
+- **Measured:** warm earth gets *more* saturated (×1.20) and darker, with a slight hue move toward red (−3.4°). Combined with mezha1 (reds lose 20% chroma, +2° toward orange), there is no consistent red/orange hue rotation to tune. So the look is not a global desaturation: blues and highlights lose chroma, warm mid-tones keep or gain it.
+- **Measured:** the highlight/midtone chroma ratio is 0.50 in the cake output, same as the phase-2 target. In scenes with warm highlights it rises to 0.9-1.2, because the cream tint itself is chroma.
+- **Measured, mixed:** shadows are neutral to slightly cool (b\* −1.4 to −1.7 in two images, −5.7 on the beach, +0.5 indoors). The desert's warm shadows are the earth, not a tint (same b\* before and after).
+- **Not measurable:** halation and grain. None of the new outputs have clipped sources (0 pixels ≥ 250 after opening), and the files are too small or re-compressed for grain.
+- **Judged by eye:** the desert output reads like a print: the sky is a dense, warm grey-cream with cloud texture intact, and the red rock looks deeper and warmer. The interior has warm, sunlit wood and dense shadows with window detail kept.
+
+Caveats: exposure is unknown in both pairs and the darkening may be mostly exposure. The pair is one scene, 2048 px, re-compressed by X, and the "original" is the author's label, not verified provenance. Region bands are cut by hand at the horizon and include the person. The newsshooter files are 740 px webp.
+
+### Recommendations for `tools/make_raw_lut.py` (pass 2)
+
+| Constant (new unless noted) | Value | Evidence | Status |
+|---|---|---|---|
+| `HIGHLIGHT_WARM` (target b\*, a\* on near-neutral highlights) | b\* **+8**, a\* **−1.5** at full strength. In display-linear, at constant luminance, that is R ×1.037, B ×0.84 (at Y 0.56-0.71); b\* +6 is R ×1.018, B ×0.87 | 8 of 9 outputs: b\* +7.7 to +10.6, a\* −4.6 to +1.7; pair shifts +10.3 and +17.8 | measured target; the form is judged |
+| `HIGHLIGHT_WARM_Y0` / `_Y1` (ramp, display Y) | start at **0.36** (L\* 66, about +1 stop, code ~162), full at **0.64** (L\* 84, about +2.5 stops), smoothstep. Hold it above that | the tints were measured at L\* 76-86 and are already strong at L\* 76-78 (cake, dmcg), so "only above +2.5 stops" is too late | measured location, judged shape. The grey-neutral test must allow b\* up to +9 above Y 0.36 |
+| `BLACK_LIFT` (exists) | keep **0.001** | median reference floor about code 5 (range 0-14.5, pooled over 10 outputs) | measured, no change |
+| `TOE_LIFT` | a gain of about **×1.12 (+0.16 stop)** on display Y around 0.015 (code ~32), easing to 1 at Y 0.004 and at Y 0.08 (code ~80) | both pairs: p25 −21 to −25 codes vs iPhone, against ours −31 vs our plain render. Direction measured, size weak (different baselines, exposure confound) | partly measured; check p25 on the LookSheet renders after the change |
+| `CHROMA_HIGH` (exists) | keep **0.8** | cake 0.50, mezha 0.47; the warm tint will add the cream chroma | measured, no change |
+| `BLUE_HIGH_CHROMA` | ×**0.6** chroma for hues 200-290° (CIELAB) above display Y 0.25, easing in from Y 0.12 | sky C\* ×0.68 (cake), about ×0 (mezha); dark skies stay blue at C\* 8-14 | measured direction; the factor is a judged middle between the two pairs. Optional: the warm highlight shift alone already pulls pale skies toward neutral |
+| Shadow tint | **no change** (neutral). Optional b\* −1.5 below display Y 0.01 | b\* −1.4 / −1.7 / −5.7 / +0.5: mixed | weak; skip |
+| Shoulder | **no change** | new outputs max 209-242, p99.5 199-231; ours +5 stops = 240 | measured, on target |
+| Halation tint (FilmTexture, not the LUT) | from (1, 0.32, 0.06) to about **(1, 0.45, 0.05)**, gain unchanged. Re-measure: target R−B ≈ 2×(R−G) | nothing new; the only source is still x_dusk (phase 2) | judged; derived from the phase-2 ratio of 1.5 |

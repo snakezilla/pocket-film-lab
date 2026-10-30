@@ -14,18 +14,22 @@
 		337E51BC92CFE95C6181B523 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B26E54731F644262B70B2D /* TestSupport.swift */; };
 		411234BE7E7B90EE4928A4C4 /* FilmLUT.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3007A19F6FE2773A409F37F /* FilmLUT.swift */; };
 		4EB5993D226F213121846F66 /* BridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E03A774BB4A2D78D7F4EA8D7 /* BridgeTests.swift */; };
+		531AA44CA17E49AF5DBF551D /* FallbackImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0522147486E8FA2792CC8E51 /* FallbackImage.swift */; };
 		5B1037D962341A3F9A075A3D /* portra400-2383.cube.bin in Resources */ = {isa = PBXBuildFile; fileRef = 0FE50B231A423AFB92F6DD37 /* portra400-2383.cube.bin */; };
 		5C04D85E79FA3CFDAFF1952A /* vision3-500t-2383.cube.bin in Resources */ = {isa = PBXBuildFile; fileRef = 6596B7A21343828B7271E228 /* vision3-500t-2383.cube.bin */; };
 		5C15D8CDE78511CC00E913F6 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30C6EB742486DCA6DE1B8758 /* WebView.swift */; };
 		63A9EB1623993E3A6B7A892F /* RawDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61026601D899BB238C48FEB /* RawDecoder.swift */; };
 		6F4937FADC4CE2AB7F399936 /* dist in Resources */ = {isa = PBXBuildFile; fileRef = 213B3A3F0E823CA7B9AB0EB0 /* dist */; };
+		75F5E5FB5015473E849F85FD /* SpeedMemoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7556D6A7BFAA451EEB533BC /* SpeedMemoryTests.swift */; };
 		7B68898E17B9A1D9E3921B8F /* TextureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67420A328FBDDC120BCE84E7 /* TextureTests.swift */; };
+		96080ED095C37E42E98A581C /* WhiteBalanceMatrix.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CE71C1042EE733662E0EFE /* WhiteBalanceMatrix.swift */; };
 		9746EE6C11367DAAE09C4CFF /* LookSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 325F8169CA210362959F2B51 /* LookSheetTests.swift */; };
 		98EC5974F35975C4026BE0EC /* PreviewStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8D64A46EA10A5210D57980 /* PreviewStore.swift */; };
 		992BBB5AA84FF34A02EDC647 /* RawPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E853E7A46BD529C36606320 /* RawPipelineTests.swift */; };
 		A5DB669DD1666DBDF102F408 /* FilmLookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5A6542DE0657DB8F26524F5 /* FilmLookTests.swift */; };
 		AE68692118AB4B02D07CFF2A /* FilmTexture.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = AE3FF3D620956F890137ADDE /* FilmTexture.ci.metal */; };
 		CCB939B1AB67B19B3A170452 /* vision3-500t-2383.json in Resources */ = {isa = PBXBuildFile; fileRef = DD9DEDE8EBDC5EF3491D07D6 /* vision3-500t-2383.json */; };
+		D52680F4F4A0334EB80B51B1 /* ExportPrivacyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA05094FB264390293A791B8 /* ExportPrivacyTests.swift */; };
 		D709C4C668A64E0B0972951B /* FilmLook.ci.metal in Sources */ = {isa = PBXBuildFile; fileRef = C27CC98BF8B339743AF479AA /* FilmLook.ci.metal */; };
 		E2A2CC8F848C71821CED9153 /* FilmEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301A41532B0FAE196317BF09 /* FilmEngine.swift */; };
 		E6CEADEA436F05676F79B260 /* RawSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F208C739B8123805D2EFA61A /* RawSession.swift */; };
@@ -46,6 +50,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0522147486E8FA2792CC8E51 /* FallbackImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackImage.swift; sourceTree = "<group>"; };
 		0E853E7A46BD529C36606320 /* RawPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawPipelineTests.swift; sourceTree = "<group>"; };
 		0FE50B231A423AFB92F6DD37 /* portra400-2383.cube.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = "portra400-2383.cube.bin"; sourceTree = "<group>"; };
 		20DAC6FD005DE611C9570757 /* PocketFilmLab.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PocketFilmLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -53,6 +58,7 @@
 		21EFFAA351E06B4A7858A4BF /* PocketFilmLabTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PocketFilmLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		301A41532B0FAE196317BF09 /* FilmEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmEngine.swift; sourceTree = "<group>"; };
 		30C6EB742486DCA6DE1B8758 /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		31CE71C1042EE733662E0EFE /* WhiteBalanceMatrix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhiteBalanceMatrix.swift; sourceTree = "<group>"; };
 		320BAC53679D55E46339E600 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		325F8169CA210362959F2B51 /* LookSheetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LookSheetTests.swift; sourceTree = "<group>"; };
 		3DE22B1747139798382A5194 /* FilmExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmExporter.swift; sourceTree = "<group>"; };
@@ -68,8 +74,10 @@
 		A5A6542DE0657DB8F26524F5 /* FilmLookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmLookTests.swift; sourceTree = "<group>"; };
 		AE3FF3D620956F890137ADDE /* FilmTexture.ci.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = FilmTexture.ci.metal; sourceTree = "<group>"; };
 		B4B26E54731F644262B70B2D /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
+		BA05094FB264390293A791B8 /* ExportPrivacyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPrivacyTests.swift; sourceTree = "<group>"; };
 		C27CC98BF8B339743AF479AA /* FilmLook.ci.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = FilmLook.ci.metal; sourceTree = "<group>"; };
 		C3007A19F6FE2773A409F37F /* FilmLUT.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmLUT.swift; sourceTree = "<group>"; };
+		C7556D6A7BFAA451EEB533BC /* SpeedMemoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedMemoryTests.swift; sourceTree = "<group>"; };
 		DD9DEDE8EBDC5EF3491D07D6 /* vision3-500t-2383.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "vision3-500t-2383.json"; sourceTree = "<group>"; };
 		E03A774BB4A2D78D7F4EA8D7 /* BridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeTests.swift; sourceTree = "<group>"; };
 		F208C739B8123805D2EFA61A /* RawSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSession.swift; sourceTree = "<group>"; };
@@ -80,6 +88,7 @@
 		007153F3D21A2231B848C3D4 /* Bridge */ = {
 			isa = PBXGroup;
 			children = (
+				0522147486E8FA2792CC8E51 /* FallbackImage.swift */,
 				7E8D64A46EA10A5210D57980 /* PreviewStore.swift */,
 				50783F0E79FE834CFACBFE21 /* RawBridge.swift */,
 				F208C739B8123805D2EFA61A /* RawSession.swift */,
@@ -111,6 +120,7 @@
 				AE3FF3D620956F890137ADDE /* FilmTexture.ci.metal */,
 				3F0EB34A9B8514664637650E /* FilmTexture.swift */,
 				F61026601D899BB238C48FEB /* RawDecoder.swift */,
+				31CE71C1042EE733662E0EFE /* WhiteBalanceMatrix.swift */,
 			);
 			path = Engine;
 			sourceTree = "<group>";
@@ -119,9 +129,11 @@
 			isa = PBXGroup;
 			children = (
 				E03A774BB4A2D78D7F4EA8D7 /* BridgeTests.swift */,
+				BA05094FB264390293A791B8 /* ExportPrivacyTests.swift */,
 				A5A6542DE0657DB8F26524F5 /* FilmLookTests.swift */,
 				325F8169CA210362959F2B51 /* LookSheetTests.swift */,
 				0E853E7A46BD529C36606320 /* RawPipelineTests.swift */,
+				C7556D6A7BFAA451EEB533BC /* SpeedMemoryTests.swift */,
 				B4B26E54731F644262B70B2D /* TestSupport.swift */,
 				67420A328FBDDC120BCE84E7 /* TextureTests.swift */,
 			);
@@ -267,6 +279,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EEF9E3FE331EEC5AEDFF3F41 /* App.swift in Sources */,
+				531AA44CA17E49AF5DBF551D /* FallbackImage.swift in Sources */,
 				E2A2CC8F848C71821CED9153 /* FilmEngine.swift in Sources */,
 				F480601D4E154FB35A1CF236 /* FilmExporter.swift in Sources */,
 				411234BE7E7B90EE4928A4C4 /* FilmLUT.swift in Sources */,
@@ -279,6 +292,7 @@
 				63A9EB1623993E3A6B7A892F /* RawDecoder.swift in Sources */,
 				E6CEADEA436F05676F79B260 /* RawSession.swift in Sources */,
 				5C15D8CDE78511CC00E913F6 /* WebView.swift in Sources */,
+				96080ED095C37E42E98A581C /* WhiteBalanceMatrix.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -287,9 +301,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				4EB5993D226F213121846F66 /* BridgeTests.swift in Sources */,
+				D52680F4F4A0334EB80B51B1 /* ExportPrivacyTests.swift in Sources */,
 				A5DB669DD1666DBDF102F408 /* FilmLookTests.swift in Sources */,
 				9746EE6C11367DAAE09C4CFF /* LookSheetTests.swift in Sources */,
 				992BBB5AA84FF34A02EDC647 /* RawPipelineTests.swift in Sources */,
+				75F5E5FB5015473E849F85FD /* SpeedMemoryTests.swift in Sources */,
 				337E51BC92CFE95C6181B523 /* TestSupport.swift in Sources */,
 				7B68898E17B9A1D9E3921B8F /* TextureTests.swift in Sources */,
 			);

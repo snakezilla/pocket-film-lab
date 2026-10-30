@@ -1,4 +1,4 @@
-import type { NativeLook, NativeRaw, RawInfo, RawSettings } from './native'
+import type { NativeLook, NativeRaw, OpenResult, RawInfo, RawSettings } from './native'
 
 /**
  * RAW mode: the page is only the control surface, the native engine develops.
@@ -36,12 +36,14 @@ export class RawMode {
     return this.bridge.looks()
   }
 
-  async open(source: 'photos' | 'files'): Promise<RawInfo | null> {
-    const info = await this.bridge.open(source)
-    if (!info) return null
-    this.info = info
-    this.compareUrl = ''
-    return info
+  /** A RAW opens a native session; a JPEG/PNG/HEIC comes back as `photo` for the web path. */
+  async open(source: 'photos' | 'files'): Promise<OpenResult> {
+    const res = await this.bridge.open(source)
+    if (res && 'raw' in res) {
+      this.info = res.raw
+      this.compareUrl = ''
+    }
+    return res
   }
 
   close(): void {

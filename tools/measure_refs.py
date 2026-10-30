@@ -38,8 +38,22 @@ SOURCES = [
     ("appstore_ipad_editor_2064x2752.png", (340, 900, 1720, 2150), "as_ipad_fruit", False),
     ("appstore_iphone_editor_1179x2556.png", (260, 990, 950, 1760), "as_iphone_fruit", False),
     ("appstore_iphone_viewer_1179x2556.png", (225, 1150, 955, 1930), "as_iphone_seascape", False),
+    # Phase 3 additions (issue #7 assistant comments). The app's exports carry a 1 px dark border.
+    ("x_cakesauce_2115693910458781996_chromagraph_2048x1422.jpg", (2, 2, 2046, 1418), "cake_after", False),
+    ("x_cakesauce_2115694195583451349_original_2048x1536.jpg", None, "cake_before_original", False),
+    ("x_dmcgco_2115886480962847174_chromagraph_1536x2048.jpg", (2, 2, 1532, 2044), "dmcg_interior", False),
+    ("newsshooter_IMG_6668-740x948.webp", (2, 2, 736, 944), "ns_beach", False),
+    ("newsshooter_IMG_6670-740x529.webp", (2, 2, 736, 525), "ns_harbour", False),
+    ("newsshooter_IMG_6671-740x418.webp", (2, 2, 736, 414), "ns_building", False),
 ]
-REFERENCE_LABELS = {"mezha1_before_iphone"}  # not reference-look output
+REFERENCE_LABELS = {"mezha1_before_iphone", "cake_before_original"}  # not reference-look output
+
+# Same-scene pairs with different framing: compare sky and land separately.
+# Row bands are fractions of the image height (horizon at ~0.40 in the output, ~0.49 in the original).
+REGION_PAIRS = {
+    "pair_cake": ("cake_before_original", "cake_after",
+                  {"sky": ((0.0, 0.45), (0.0, 0.36)), "land": ((0.58, 1.0), (0.50, 1.0))}),
+}
 
 L_BINS = np.arange(0, 101, 10)
 HUE_MASKS = {  # (hue lo, hue hi, C* min, L* lo, L* hi) in CIELAB degrees
@@ -205,6 +219,22 @@ def halation(codes):
     return out
 
 
+def region_rows(codes, band):
+    h = codes.shape[0]
+    return codes[int(band[0] * h):int(band[1] * h)]
+
+
+def region_stats(codes):
+    lin = srgb_to_linear(codes / 255)
+    lab = rgb_to_lab(lin)
+    c = np.hypot(lab[..., 1], lab[..., 2])
+    ang = np.degrees(np.arctan2(lab[..., 2].mean(), lab[..., 1].mean())) % 360
+    return {"L": round(float(lab[..., 0].mean()), 1), "a": round(float(lab[..., 1].mean()), 2),
+            "b": round(float(lab[..., 2].mean()), 2), "C": round(float(c.mean()), 1),
+            "hue": round(float(ang), 1),
+            "RGB_mean": [round(float(v), 1) for v in codes.reshape(-1, 3).mean(axis=0)]}
+
+
 def pair_compare(before, after):
     yb = linear_to_code(srgb_to_linear(before / 255) @ np.array([0.2126, 0.7152, 0.0722]))
     ya = linear_to_code(srgb_to_linear(after / 255) @ np.array([0.2126, 0.7152, 0.0722]))
@@ -258,6 +288,15 @@ def main():
         cache[label] = codes
     if "mezha1_after" in cache and "mezha1_before_iphone" in cache:
         report["pair_mezha1"] = pair_compare(cache["mezha1_before_iphone"], cache["mezha1_after"])
+    for name, (before, after, regions) in REGION_PAIRS.items():
+        if before not in cache or after not in cache:
+            continue
+        res = pair_compare(cache[before], cache[after])
+        for region, (band_b, band_a) in regions.items():
+            rb, ra = region_rows(cache[before], band_b), region_rows(cache[after], band_a)
+            res[region] = {"before": region_stats(rb), "after": region_stats(ra),
+                           "pair": pair_compare(rb, ra)}
+        report[name] = res
     json.dump(report, sys.stdout, indent=1)
 
 

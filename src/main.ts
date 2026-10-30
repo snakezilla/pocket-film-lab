@@ -337,12 +337,19 @@ async function onOpenRaw(source: 'photos' | 'files'): Promise<void> {
       rawLooks = await raw.looks()
       rawLook = rawLooks[0]?.id ?? ''
     }
-    say('Opening RAW…')
-    const info = await raw.open(source)
-    if (!info) {
-      say('No RAW file opened.')
+    say('Opening photo…')
+    const opened = await raw.open(source)
+    if (!opened) {
+      say('No photo opened.')
       return
     }
+    if ('photo' in opened) {
+      // Not RAW: the existing JPEG/PNG path develops it.
+      const blob = await (await fetch(opened.photo.url)).blob()
+      await onFile(new File([blob], opened.photo.name, { type: blob.type }))
+      return
+    }
+    const info = opened.raw
     // Leave the JPEG path idle; it stays intact for the next JPEG/PNG.
     previewer.cancel()
     invalidateExport()
