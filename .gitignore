@@ -4,3 +4,6 @@ tools/.venv
 test-results
 playwright-report
 measurements/out
+ios/build
+ios/*.xcodeproj/xcuserdata
+references/local

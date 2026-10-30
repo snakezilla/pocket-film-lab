@@ -1,0 +1,28 @@
+name: PocketFilmLab
+options:
+  bundleIdPrefix: so.byahsan
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  PocketFilmLab:
+    type: application
+    platform: iOS
+    sources:
+      - PocketFilmLab
+      - path: ../dist
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: so.byahsan.pocketfilmlab
+        DEVELOPMENT_TEAM: 9HF7TSVCH4
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Film Lab
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Save processed photos to your library.
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
