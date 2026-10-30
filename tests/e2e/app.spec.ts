@@ -117,7 +117,7 @@ test('one rotated JPEG develops automatically, compares, and downloads a clean J
   await page.goto('/')
   await open(page, 'rotated.jpg')
   await developed(page)
-  await expect(page.locator('#status')).toHaveText('Cine print · 3024 × 4032') // upright size
+  await expect(page.locator('#status')).toHaveText('Lamplight look')
   await expect(page.locator('#strip')).toBeHidden()
   // Adjustments are tucked away by default.
   await expect(page.locator('#adjust')).not.toHaveAttribute('open', '')
@@ -173,7 +173,7 @@ print(json.dumps([im.getpixel((int(w*.95),int(h*.05)))]))`, path]).toString(),
   expect(out[0][2]).toBeLessThan(100)
 
   // A change re-enables saving.
-  await page.locator('#looks [data-look="portra"]').click()
+  await page.locator('#looks [data-look="portrait"]').click()
   await expect(page.locator('#save')).toBeEnabled()
 
   // Privacy: every request stayed on this origin.
@@ -186,7 +186,7 @@ test('a batch develops in a strip, adjusts together, and downloads every photo',
   await open(page, 'rotated.jpg', 'small.png', 'broken.jpg')
   await expect(page.locator('#strip .thumb')).toHaveCount(3)
   await developed(page)
-  await expect(page.locator('#status')).toHaveText('2 photos · Cine print · 1 couldn’t be read')
+  await expect(page.locator('#status')).toHaveText('2 photos, Lamplight look. 1 didn’t work.')
   await expect(page.locator('#strip .thumb[data-state="failed"]')).toHaveCount(1)
   await expect(page.locator('#save')).toHaveText('Download 2')
 
@@ -199,9 +199,9 @@ test('a batch develops in a strip, adjusts together, and downloads every photo',
   await page.locator('#adjust summary').click()
   await expect(page.locator('#adjust-scope')).toHaveText('Changes apply to both photos.') // the unreadable one does not count
   const before = await page.locator('#strip .thumb img').first().getAttribute('src')
-  await page.locator('#looks [data-look="portra"]').click()
+  await page.locator('#looks [data-look="portrait"]').click()
   await expect.poll(() => page.locator('#strip .thumb img').first().getAttribute('src'), { timeout: 20_000 }).not.toBe(before)
-  await expect(page.locator('#adjust-look')).toHaveText('Portra')
+  await expect(page.locator('#adjust-look')).toHaveText('Portrait')
 
   const names: string[] = []
   page.on('download', (d) => names.push(d.suggestedFilename()))
@@ -241,20 +241,20 @@ test('choosing again replaces the photos', async ({ page }) => {
 test('RAW, broken and unsupported files fail with clear errors', async ({ page }) => {
   await page.goto('/')
   await open(page, 'camera.dng')
-  await expect(page.locator('#status')).toContainText('RAW files need the Film Lab iOS app')
+  await expect(page.locator('#status')).toContainText('only opens in the Silver Hour app')
   await expect(page.locator('#status')).toHaveClass(/error/)
   await expect(page.locator('#save')).toBeDisabled()
   await open(page, 'notes.txt')
-  await expect(page.locator('#status')).toContainText('Unsupported file type')
+  await expect(page.locator('#status')).toContainText('isn’t a photo we can open')
   await open(page, 'broken.jpg')
-  await expect(page.locator('#status')).toContainText('Could not read this image', { timeout: 15_000 })
+  await expect(page.locator('#status')).toContainText('That one didn’t work. Try another photo.', { timeout: 15_000 })
 })
 
 test('HEIC: develops or fails with a HEIC-specific message', async ({ page, browserName }) => {
   await page.goto('/')
   await open(page, 'small.heic')
   const status = page.locator('#status')
-  await expect(status).toContainText(/Cine print|could not decode this HEIC/, { timeout: 20_000 })
+  await expect(status).toContainText(/Lamplight look|can’t open that photo/, { timeout: 20_000 })
   test.info().annotations.push({ type: 'heic', description: `${browserName}: ${await status.textContent()}` })
 })
 

@@ -12,7 +12,7 @@ enum FallbackImage {
         case unreadable(String)
         var errorDescription: String? {
             switch self {
-            case .unreadable(let name): return "Could not read \(name) as a photo. Pick a RAW, JPEG, PNG or HEIC file."
+            case .unreadable: return RawBridge.oopsMessage
             }
         }
     }

@@ -44,23 +44,23 @@ describe('progress and labels', () => {
     b = updateItem(b, 'k1', { developed: 0, state: 'failed' })
     expect(progress(b)).toEqual({ total: 4, done: 2, failed: 1 })
     expect(saveable(b).map((it) => it.key)).toEqual(['k0', 'k2', 'k3'])
-    expect(statusLine(b, '250D Print')).toBe('Developing 3 of 4…')
+    expect(statusLine(b, 'Daylight')).toBe('Developing 3 of 4…')
   })
 
   it('a finished batch and a single photo', () => {
     let b = batchOf(3)
     for (const k of ['k0', 'k1', 'k2']) b = updateItem(b, k, { developed: 0, state: 'ready' })
-    expect(statusLine(b, '250D Print')).toBe('3 photos · 250D Print')
+    expect(statusLine(b, 'Daylight')).toBe('3 photos, Daylight look')
     b = updateItem(b, 'k2', { state: 'failed' })
-    expect(statusLine(b, '250D Print')).toBe('2 photos · 250D Print · 1 couldn’t be read')
+    expect(statusLine(b, 'Daylight')).toBe('2 photos, Daylight look. 1 didn’t work.')
     const one = updateItem(batchOf(1), 'k0', { developed: 0, state: 'ready', width: 4032, height: 3024 })
-    expect(statusLine(one, '250D Print')).toBe('250D Print · RAW · 4032 × 3024')
+    expect(statusLine(one, 'Daylight')).toBe('Daylight look')
   })
 
   it('notes photos left out of a pick', () => {
     expect(pickNote(0, 0)).toBe('')
-    expect(pickNote(2, 0)).toBe('2 photos couldn’t be read.')
-    expect(pickNote(0, 1)).toBe('Kept the first 50; 1 photo was left out.')
+    expect(pickNote(2, 0)).toBe('2 photos didn’t open.')
+    expect(pickNote(0, 1)).toBe('We kept the first 50. 1 more was left out.')
   })
 
   it('save button labels', () => {

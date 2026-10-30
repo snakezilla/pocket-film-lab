@@ -1,4 +1,5 @@
 import { heroItem, progress, saveable, statusLine, type Batch, type BatchItem } from './batch'
+import { COPY } from './copy'
 import type { Refs } from './dom'
 import type { NativeLook } from './native'
 import type { Adjustments } from './settings'
@@ -44,7 +45,7 @@ export function render(refs: Refs, s: ViewState, strip: ThumbStrip): void {
 function renderHero(refs: Refs, s: ViewState, hero: BatchItem | undefined): void {
   if (!s.comparing && hero?.filmUrl && refs.view.getAttribute('src') !== hero.filmUrl) refs.view.src = hero.filmUrl
   if (!hero?.filmUrl) refs.view.removeAttribute('src')
-  refs.view.alt = hero ? `${hero.name}, developed` : ''
+  refs.view.alt = hero ? `${hero.name}, with the film look` : ''
   refs.view.hidden = !hero?.filmUrl
   refs.spinner.hidden = !hero || hero.state === 'failed' || Boolean(hero.filmUrl)
   refs.badge.hidden = !s.comparing
@@ -62,7 +63,7 @@ function renderProgress(refs: Refs, batch: Batch): void {
 
 function renderStatus(refs: Refs, s: ViewState, batch: Batch, hero: BatchItem | undefined): void {
   const look = s.looks.find((l) => l.id === s.adj.look)?.label ?? ''
-  const heroError = hero?.state === 'failed' ? `This photo couldn’t be developed. ${hero.error ?? ''}`.trim() : ''
+  const heroError = hero?.state === 'failed' ? hero.error ?? COPY.oops : ''
   const text = s.message?.text || heroError || statusLine(batch, look)
   refs.status.textContent = text
   refs.status.classList.toggle('error', Boolean(s.message?.error || (!s.message && heroError)))
@@ -101,12 +102,12 @@ function setIcon(el: HTMLElement, icon: 'spin' | 'check' | null): void {
 
 export function saveLabel(app: boolean, n: number, save: SavePhase, done: boolean): string {
   if (save.phase === 'saving') {
-    if (save.stopping) return 'Stopping…'
-    return save.total > 1 ? `Saving ${Math.min(save.done + 1, save.total)} of ${save.total}…` : 'Saving…'
+    if (save.stopping) return COPY.stopping
+    return save.total > 1 ? COPY.savingN(Math.min(save.done + 1, save.total), save.total) : COPY.saving
   }
-  if (done) return app ? 'Saved to Photos' : n > 1 ? 'Downloaded' : 'Saved'
-  if (app) return n > 1 ? `Save ${n} to Photos` : 'Save to Photos'
-  return n > 1 ? `Download ${n}` : 'Download'
+  if (done) return app ? COPY.savedButton : COPY.downloadedButton
+  if (app) return n > 1 ? COPY.saveMany(n) : COPY.saveOne
+  return n > 1 ? COPY.downloadMany(n) : COPY.download
 }
 
 /** The row of thumbnails under the photo (a batch only). */
@@ -127,7 +128,7 @@ export class ThumbStrip {
       btn.dataset.state = item.state
       const current = i === batch.hero
       btn.setAttribute('aria-current', String(current))
-      btn.setAttribute('aria-label', `${item.name}, photo ${i + 1} of ${batch.items.length}${item.state === 'failed' ? ', couldn’t be developed' : ''}`)
+      btn.setAttribute('aria-label', `${item.name}, photo ${i + 1} of ${batch.items.length}${item.state === 'failed' ? ', didn’t work' : ''}`)
       if (current && this.root.dataset.hero !== item.key) {
         this.root.dataset.hero = item.key
         btn.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })

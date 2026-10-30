@@ -1,5 +1,6 @@
 import './style.css'
 import { AdjustPanel } from './adjust'
+import { COPY, FriendlyError, friendlyMessage } from './copy'
 import { BATCH_LIMIT, heroItem, newItem, pickNote, saveable, updateItem, type BatchItem } from './batch'
 import { Developer } from './developer'
 import { findRefs } from './dom'
@@ -62,7 +63,7 @@ function paint(): void {
 }
 
 const say = (text: string, error = false) => setState({ message: text ? { text, error } : null })
-const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
+const errorText = (e: unknown) => friendlyMessage(e)
 const defaults = (): Adjustments => ({ ...DEFAULT_ADJUSTMENTS, look: state.looks[0]?.id ?? '' })
 const revoke = (url: string | undefined) => url?.startsWith('blob:') && URL.revokeObjectURL(url)
 
@@ -87,7 +88,7 @@ function previewEdge(): number {
 async function developPreview(item: BatchItem, hero: boolean): Promise<Partial<BatchItem> | null> {
   const adj = state.adj
   if (item.engine === 'raw') {
-    if (!bridge || !item.nativeId) throw new Error('RAW photos need the iOS app.')
+    if (!bridge || !item.nativeId) throw new FriendlyError(COPY.appOnly)
     const res = await bridge.render(item.nativeId, toRawSettings(adj), { compare: false, maxEdge: previewEdge(), hero })
     if ('stale' in res) return null
     return { filmUrl: res.url, info: res.info, width: res.info.width, height: res.info.height }
@@ -172,7 +173,7 @@ async function originalUrl(item: BatchItem): Promise<string> {
   const cacheKey = `${item.key}|${adj.exposure}|${adj.wbTemp}|${adj.wbTint}`
   const known = originals.get(cacheKey)
   if (known) return known
-  if (!bridge || !item.nativeId) throw new Error('RAW photos need the iOS app.')
+  if (!bridge || !item.nativeId) throw new FriendlyError(COPY.appOnly)
   const res = await bridge.render(item.nativeId, toRawSettings(adj), { compare: true, maxEdge: previewEdge(), hero: true })
   if ('stale' in res) throw new Error('stale')
   originals.set(cacheKey, res.url)
@@ -226,8 +227,8 @@ async function onSave(): Promise<void> {
   const clean = report.saved.length > 0 && !report.failed.length && !report.stopped
   const text =
     !bridge && items.length === 1 && outcome !== 'downloaded'
-      ? outcome === 'shared' ? 'Shared.' : 'Share sheet closed; nothing saved.'
-      : saveSummary(report, items.length, bridge ? 'Saved' : 'Downloaded', bridge ? ' to Photos' : '')
+      ? outcome === 'shared' ? COPY.shared : COPY.notSaved
+      : saveSummary(report, items.length, bridge !== null)
   setState({
     save: report.denied ? { phase: 'denied' } : clean ? { phase: 'done', version, epoch: batch.epoch } : { phase: 'idle' },
     message: { text, error: report.failed.length > 0 || report.denied },
@@ -237,10 +238,10 @@ async function onSave(): Promise<void> {
 async function onShare(): Promise<void> {
   const hero = state.batch ? heroItem(state.batch) : undefined
   if (!hero || state.busyShare) return
-  setState({ busyShare: true, message: { text: 'Preparing full size…', error: false } })
+  setState({ busyShare: true, message: { text: COPY.gettingReady, error: false } })
   try {
     const shared = await shareOne(hero, bridge, web, sources, state.adj)
-    setState({ busyShare: false, message: shared ? { text: 'Shared.', error: false } : null })
+    setState({ busyShare: false, message: shared ? { text: COPY.shared, error: false } : null })
   } catch (error) {
     setState({ busyShare: false, message: { text: errorText(error), error: true } })
   }

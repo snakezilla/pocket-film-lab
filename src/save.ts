@@ -1,4 +1,5 @@
-import { plural, type BatchItem } from './batch'
+import type { BatchItem } from './batch'
+import { COPY, friendlyMessage } from './copy'
 
 /**
  * Saving a batch: one photo at a time (a full-size render can peak at ~220 MB, so
@@ -50,24 +51,24 @@ export async function saveAll(
       saved.push(item.key)
     } catch (error) {
       if (error instanceof SaveStopped) return { saved, failed, stopped: true, denied: false }
-      failed.push({ key: item.key, name: item.name, error: error instanceof Error ? error.message : String(error) })
+      failed.push({ key: item.key, name: item.name, error: friendlyMessage(error) })
     }
   }
   onProgress(items.length, items.length)
   return { saved, failed, stopped: false, denied: false }
 }
 
-/** One line for the status after a save, e.g. verb "Saved", where " to Photos". */
-export function saveSummary(report: SaveReport, total: number, verb: string, where = ''): string {
-  if (report.denied) return 'Film Lab isn’t allowed to add photos. Allow “Add Photos Only” in Settings.'
+/** One line for the status after a save. `photos`: saved to Photos (app) or downloaded (browser). */
+export function saveSummary(report: SaveReport, total: number, photos: boolean): string {
+  if (report.denied) return COPY.denied
   const n = report.saved.length
-  const head = report.stopped
-    ? `Stopped. ${verb} ${n} of ${total}${where}.`
-    : report.failed.length
-      ? `${verb} ${n} of ${total}${where}.`
-      : `${verb} ${plural(n, 'photo')}${where}.`
-  if (!report.failed.length) return head
-  const first = report.failed[0]
-  const more = report.failed.length > 1 ? ` (and ${report.failed.length - 1} more)` : ''
-  return `${head} ${first.name} failed: ${first.error}${more}`
+  if (report.stopped) return photos ? COPY.stopped(n, total) : COPY.stoppedDownloads(n, total)
+  if (report.failed.length) {
+    const head = photos ? COPY.savedSome(n, total) : COPY.downloadedSome(n, total)
+    // One failure keeps its own words when they say more than "didn't work"; several get one line.
+    const why = report.failed.length === 1 && report.failed[0].error !== COPY.oops ? report.failed[0].error : COPY.failedSome(report.failed.length)
+    return `${head} ${why}`
+  }
+  if (!photos) return COPY.downloaded(n)
+  return n === 1 ? COPY.savedOne : COPY.savedMany(n)
 }

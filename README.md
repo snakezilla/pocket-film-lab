@@ -1,6 +1,6 @@
-# Pocket Film Lab
+# Pocket Film Lab (Silver Hour)
 
-A small app that gives a film look to photos you already have: an iOS app (Film Lab) with a native RAW engine (see "RAW mode"), and the same UI as a mobile web app for JPEG/PNG. The original photo does not change.
+A small app that gives a film look to photos you already have: an iOS app (Silver Hour, formerly Film Lab) with a native RAW engine (see "RAW mode"), and the same UI as a mobile web app for JPEG/PNG. The original photo does not change.
 
 **Flow (since 2026-10-30):**
 
@@ -112,7 +112,7 @@ Raw2Film (MIT) is Python with rawpy/LibRaw, OpenCV, numba, scipy, lensfunpy and 
 src/engine/   color.ts, lut.ts, blur.ts, film.ts  (pure pixel code, unit tested)
 src/          main.ts (UI), worker.ts, processor.ts (worker + cancel), decode.ts,
               export.ts, jpeg.ts (metadata strip), files.ts (checks/sizing), looks.ts
-public/luts/  print.bin, portra.bin (+ .json metadata and grey ramps)
+public/luts/  print.bin, portra.bin (metadata and grey ramps: tools/lut-meta/*.json)
 tools/        make_lut.py, make_fixtures.py, measure.ts, starter.ts (original engine,
               for comparison only), speed-browser.mjs, shoot.mjs
 tests/        unit/, e2e/, fixtures/ (synthetic images only)

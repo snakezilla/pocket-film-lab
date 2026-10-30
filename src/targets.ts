@@ -1,4 +1,5 @@
 import type { BatchItem } from './batch'
+import { COPY, FriendlyError } from './copy'
 import { downloadBlob, saveJpeg, type SaveOutcome } from './export'
 import { exportName } from './files'
 import { canSaveWith, type NativeRaw } from './native'
@@ -17,7 +18,7 @@ export function photosTarget(bridge: NativeRaw, web: WebEngine, sources: Sources
     prepare: async () => (canSaveWith(await bridge.saveAccess()) ? 'ok' : 'denied'),
     save: async (item, index, total) => {
       if (item.engine === 'raw') {
-        if (!item.nativeId) throw new Error('This photo is no longer open.')
+        if (!item.nativeId) throw new FriendlyError(COPY.noLongerOpen)
         await bridge.save(item.nativeId, toRawSettings(adj), 'heic')
         return
       }
@@ -48,7 +49,7 @@ export function downloadTarget(web: WebEngine, sources: Sources, adj: Adjustment
 /** The share sheet for one photo (secondary to Save). Returns true if it was shared. */
 export async function shareOne(item: BatchItem, bridge: NativeRaw | null, web: WebEngine, sources: Sources, adj: Adjustments): Promise<boolean> {
   if (item.engine === 'raw') {
-    if (!bridge || !item.nativeId) throw new Error('This photo is no longer open.')
+    if (!bridge || !item.nativeId) throw new FriendlyError(COPY.noLongerOpen)
     return (await bridge.exportFile(item.nativeId, toRawSettings(adj), 'heic')).shared
   }
   const blob = await web.full(await sources.file(item), adj)

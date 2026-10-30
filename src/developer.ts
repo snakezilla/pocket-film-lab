@@ -1,4 +1,5 @@
 import { heroItem, nextToDevelop, type Batch, type BatchItem } from './batch'
+import { friendlyMessage } from './copy'
 import { CancelledError } from './processor'
 
 /**
@@ -76,7 +77,7 @@ export class Developer {
     } catch (error) {
       // Cancelled: a new pick reset the engines; the next pass sees the new batch.
       if (error instanceof CancelledError) return
-      const message = error instanceof Error ? error.message : String(error)
+      const message = friendlyMessage(error)
       this.host.commit(batch.epoch, item.key, { state: 'failed', error: message, developed: version })
     }
   }

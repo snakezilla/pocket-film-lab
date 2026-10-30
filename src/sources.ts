@@ -1,3 +1,4 @@
+import { COPY, FriendlyError } from './copy'
 import type { BatchItem } from './batch'
 import type { NativeRaw } from './native'
 
@@ -17,7 +18,7 @@ export class Sources {
     if (this.last?.key === item.key) return this.last.file
     const url = await this.url(item)
     const res = await fetch(url)
-    if (!res.ok) throw new Error(`Could not read ${item.name}.`)
+    if (!res.ok) throw new FriendlyError(COPY.oops)
     const blob = await res.blob()
     const file = new File([blob], this.nameFor(item, url), { type: blob.type })
     this.last = { key: item.key, file }
@@ -33,7 +34,7 @@ export class Sources {
       url = URL.createObjectURL(item.file)
     } else {
       const served = item.nativeId && this.bridge ? await this.bridge.source(item.nativeId) : null
-      if (!served) throw new Error(`${item.name} is no longer open.`)
+      if (!served) throw new FriendlyError(COPY.noLongerOpen)
       url = served.url
     }
     this.urls.set(item.key, url)

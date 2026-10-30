@@ -150,7 +150,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         for extra in pick.urls.dropFirst(Self.maxBatch) {
             try? FileManager.default.removeItem(at: extra.deletingLastPathComponent())
         }
-        guard !kept.isEmpty else { reply(nil, "Those files could not be read as photos."); return }
+        guard !kept.isEmpty else { reply(nil, Self.pickFailedMessage); return }
         let entries = replaceBatch(with: kept)
         reply([
             "items": entries.map { ["id": $0.id, "kind": $0.item.isRaw ? "raw" : "photo", "name": $0.item.url.lastPathComponent] },
@@ -164,7 +164,11 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         return (id, item)
     }
 
-    static let closedMessage = "That photo is no longer open."
+    // Shown to people (the page passes these through as they are): plain words, no jargon.
+    static let closedMessage = "That photo isn’t open anymore. Choose it again."
+    static let oopsMessage = "That one didn’t work. Try another photo."
+    static let pickFailedMessage = "Those didn’t open. Try other photos."
+    static let closedWhileSavingMessage = "That photo was closed before it finished saving."
 
     // MARK: source (non-RAW photos)
 
@@ -189,7 +193,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
 
     func render(_ body: [String: Any], reply: @escaping (Any?, String?) -> Void) {
         guard let (id, item) = item(body) else { reply(nil, Self.closedMessage); return }
-        guard item.isRaw else { reply(nil, "Not a RAW photo."); return }
+        guard item.isRaw else { reply(nil, Self.oopsMessage); return }
         let settings = Self.settings(from: body["settings"])
         let compare = body["compare"] as? Bool ?? false
         let hero = body["hero"] as? Bool ?? true
@@ -252,7 +256,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
     /// deleted and never shared or saved: a stale photo must not leave the app.
     func renderExport(_ body: [String: Any], done: @escaping (URL?, Double, String?) -> Void) {
         guard let (id, item) = item(body) else { done(nil, 0, Self.closedMessage); return }
-        guard item.isRaw else { done(nil, 0, "Not a RAW photo."); return }
+        guard item.isRaw else { done(nil, 0, Self.oopsMessage); return }
         var settings = Self.settings(from: body["settings"])
         settings.grainSeed = CGFloat.random(in: 0...10_000).rounded()
         let format = FilmExportFormat(rawValue: body["format"] as? String ?? "heic") ?? .heic
@@ -268,7 +272,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
                 DispatchQueue.main.async {
                     guard epoch == self.epoch else {
                         try? FileManager.default.removeItem(at: file)
-                        done(nil, ms, "The photo was closed before the export finished.")
+                        done(nil, ms, Self.closedWhileSavingMessage)
                         return
                     }
                     done(file, ms, nil)
@@ -301,7 +305,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
     /// Saves a JPEG/PNG the page developed (the web path). Only image bytes are accepted.
     func saveData(_ body: [String: Any], reply: @escaping (Any?, String?) -> Void) {
         guard let b64 = body["data"] as? String, let data = Data(base64Encoded: b64) else {
-            reply(nil, "Nothing to save.")
+            reply(nil, Self.oopsMessage)
             return
         }
         let file: URL

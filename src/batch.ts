@@ -1,4 +1,8 @@
+import { COPY } from './copy'
 import type { RawInfo } from './native'
+import { plural } from './plural'
+
+export { plural }
 
 /**
  * The picked photos and how far each one has got. Pure data plus pure helpers, so
@@ -77,21 +81,13 @@ export function saveable(batch: Batch): readonly BatchItem[] {
   return batch.items.filter((it) => it.state !== 'failed')
 }
 
-export function plural(n: number, one: string, many = `${one}s`): string {
-  return `${n} ${n === 1 ? one : many}`
-}
-
 /** The status line under the photo. */
 export function statusLine(batch: Batch, lookLabel: string): string {
   const p = progress(batch)
-  if (p.done < p.total) return `Developing ${Math.min(p.done + 1, p.total)} of ${p.total}…`
-  const hero = heroItem(batch)
-  const failedNote = p.failed ? ` · ${p.failed} couldn’t be read` : ''
-  if (p.total === 1 && hero) {
-    const size = hero.width && hero.height ? ` · ${hero.width} × ${hero.height}` : ''
-    return `${lookLabel}${hero.engine === 'raw' ? ' · RAW' : ''}${size}`
-  }
-  return `${plural(p.total - p.failed, 'photo')} · ${lookLabel}${failedNote}`
+  if (p.done < p.total) return COPY.developing(Math.min(p.done + 1, p.total), p.total)
+  if (p.total === 1) return COPY.oneLook(lookLabel)
+  const line = COPY.batchLook(p.total - p.failed, lookLabel)
+  return p.failed ? `${line}. ${COPY.someFailed(p.failed)}` : line
 }
 
 /** The most photos one pick keeps (RawBridge.maxBatch). */
@@ -100,7 +96,7 @@ export const BATCH_LIMIT = 50
 /** Notes about a pick that did not open everything. */
 export function pickNote(skipped: number, truncated: number): string {
   const parts: string[] = []
-  if (truncated) parts.push(`Kept the first ${BATCH_LIMIT}; ${plural(truncated, 'photo was', 'photos were')} left out.`)
-  if (skipped) parts.push(`${plural(skipped, 'photo', 'photos')} couldn’t be read.`)
+  if (truncated) parts.push(COPY.keptFirst(BATCH_LIMIT, truncated))
+  if (skipped) parts.push(COPY.skipped(skipped))
   return parts.join(' ')
 }

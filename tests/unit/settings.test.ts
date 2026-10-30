@@ -15,16 +15,17 @@ describe('one set of adjustments for both engines', () => {
   })
 
   it('maps native looks to the closest web look', () => {
-    expect(webLookFor('portra400-2383').id).toBe('portra')
-    expect(webLookFor('vision3-250d-2383').id).toBe('print')
-    expect(webLookFor('print').id).toBe('print')
-    expect(webLookFor('portra').id).toBe('portra')
+    expect(webLookFor('portra400-2383').id).toBe('portrait')
+    expect(webLookFor('vision3-250d-2383').id).toBe('lamplight')
+    expect(webLookFor('vision3-500t-2383').id).toBe('lamplight')
+    expect(webLookFor('portrait').id).toBe('portrait')
+    expect(webLookFor('unknown').id).toBe('lamplight')
   })
 
   it('formats values for the sliders', () => {
-    expect(formatValue('exposure', 0)).toBe('0.0 EV')
-    expect(formatValue('exposure', 0.5)).toBe('+0.5 EV')
-    expect(formatValue('exposure', -1.2)).toBe('−1.2 EV')
+    expect(formatValue('exposure', 0)).toBe('0.0')
+    expect(formatValue('exposure', 0.5)).toBe('+0.5')
+    expect(formatValue('exposure', -1.2)).toBe('−1.2')
     expect(formatValue('grain', 0.35)).toBe('35%')
     expect(formatTint(-4)).toBe('−4')
     expect(formatTint(0)).toBe('0')

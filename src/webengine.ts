@@ -1,3 +1,4 @@
+import { FriendlyError } from './copy'
 import { decodePhoto, decodePreview } from './decode'
 import { encodeJpeg } from './export'
 import { checkFile, type FileCheck } from './files'
@@ -22,7 +23,7 @@ const PREVIEW_QUALITY = 0.9
 
 function checked(file: File): FileCheck {
   const check = checkFile(file.name, file.type, file.size)
-  if (check.kind === 'rejected') throw new Error(check.reason)
+  if (check.kind === 'rejected') throw new FriendlyError(check.reason)
   return check
 }
 

@@ -1,3 +1,4 @@
+import { COPY, FriendlyError } from './copy'
 import { downscaleSteps, fitSize, WORK_EDGE, PREVIEW_EDGE, type FileCheck } from './files'
 
 export interface DecodedPhoto {
@@ -44,11 +45,7 @@ async function withImage<T>(file: File, check: FileCheck, use: (img: HTMLImageEl
     try {
       await img.decode()
     } catch {
-      throw new Error(
-        check.kind === 'heic'
-          ? 'This browser could not decode this HEIC file. On iPhone, pick it from Photos (the picker converts to JPEG) or export it as JPEG.'
-          : 'Could not read this image. The file may be damaged or too large for this device.',
-      )
+      throw new FriendlyError(check.kind === 'heic' ? COPY.browserCantOpen : COPY.oops)
     }
     return use(img, img.naturalWidth, img.naturalHeight)
   } finally {
@@ -66,7 +63,7 @@ function drawScaled(src: CanvasImageSource, sw: number, sh: number, target: { wi
     canvas.width = step.width
     canvas.height = step.height
     const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('This device ran out of canvas memory. Try a smaller photo.')
+    if (!ctx) throw new FriendlyError(COPY.tooBigForPhone)
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(current, 0, 0, cw, ch, 0, 0, step.width, step.height)
@@ -81,7 +78,7 @@ function drawScaled(src: CanvasImageSource, sw: number, sh: number, target: { wi
 
 function readPixels(canvas: HTMLCanvasElement): ImageData {
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('This device ran out of canvas memory. Try a smaller photo.')
+  if (!ctx) throw new FriendlyError(COPY.tooBigForPhone)
   return ctx.getImageData(0, 0, canvas.width, canvas.height)
 }
 

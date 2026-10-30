@@ -1,3 +1,4 @@
+import { COPY } from './copy'
 import type { Refs } from './dom'
 import type { NativeLook, RawInfo } from './native'
 import { formatTint, formatValue, type Adjustments, type SliderKey } from './settings'
@@ -63,7 +64,7 @@ export class AdjustPanel {
     this.syncWb(view)
     this.refs.rawOnly.hidden = !view.hasRaw
     this.refs.adjustScope.hidden = view.count < 2
-    this.refs.adjustScope.textContent = view.count === 2 ? 'Changes apply to both photos.' : `Changes apply to all ${view.count} photos.`
+    this.refs.adjustScope.textContent = COPY.appliesToAll(view.count)
   }
 
   private syncWb({ adj, asShot }: AdjustView): void {
@@ -73,9 +74,10 @@ export class AdjustPanel {
     setRange(this.refs.input('wbTint'), rangeIncluding(tint, WB_TINT_RANGE, WB_TINT_LIMITS))
     this.refs.input('wbTemp').value = String(temp)
     this.refs.input('wbTint').value = String(tint)
-    const asShotNote = adj.wbTemp === null ? 'As shot · ' : ''
-    this.refs.output('wbTemp').textContent = `${asShotNote}${Math.round(temp)} K`
-    this.refs.output('wbTint').textContent = formatTint(tint)
+    // No kelvins: "As taken", or how far from it, in steps of 100 K.
+    const base = asShot ?? { wbTemp: temp, wbTint: tint }
+    this.refs.output('wbTemp').textContent = adj.wbTemp === null ? COPY.asTaken : formatTint((temp - base.wbTemp) / 100)
+    this.refs.output('wbTint').textContent = adj.wbTint === null ? COPY.asTaken : formatTint(tint - base.wbTint)
   }
 
   private buildLooks(looks: readonly NativeLook[]): void {
@@ -85,8 +87,7 @@ export class AdjustPanel {
       btn.className = 'segment'
       btn.setAttribute('role', 'radio')
       btn.dataset.look = look.id
-      btn.textContent = look.label.replace(/ Print$/, '')
-      btn.title = look.label
+      btn.textContent = look.label
       btn.addEventListener('click', () => this.emit({ look: look.id }, 'look'))
       btn.addEventListener('keydown', (e) => this.arrowKeys(e, looks, look.id))
       return btn

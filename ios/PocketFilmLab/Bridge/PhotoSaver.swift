@@ -34,8 +34,8 @@ struct SystemPhotoSaver: PhotoSaving {
         case failed
         var errorDescription: String? {
             switch self {
-            case .notAllowed: return "Film Lab is not allowed to add photos. Turn it on in Settings › Film Lab › Photos."
-            case .failed: return "Photos did not accept the file."
+            case .notAllowed: return "Silver Hour needs your OK to add photos. Turn it on in Settings."
+            case .failed: return "Photos didn’t take that one. Try again."
             }
         }
     }

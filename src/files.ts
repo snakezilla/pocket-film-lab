@@ -1,4 +1,5 @@
 /** File checks that run before any decoding. Pure, so they are unit tested. */
+import { COPY } from './copy'
 
 export const MAX_FILE_BYTES = 80 * 1024 * 1024
 export const WORK_EDGE = 2400
@@ -18,15 +19,15 @@ export function checkFile(name: string, type: string, size: number): FileCheck {
   const ext = (name.split('.').pop() ?? '').toLowerCase()
   const mime = type.toLowerCase()
   if (RAW_EXT.includes(ext) || mime.includes('raw') || mime === 'image/x-adobe-dng' || mime === 'image/dng') {
-    return { kind: 'rejected', reason: 'RAW files need the Film Lab iOS app. In a browser, use JPEG or PNG.' }
+    return { kind: 'rejected', reason: COPY.appOnly }
   }
-  if (size === 0) return { kind: 'rejected', reason: 'This file is empty.' }
+  if (size === 0) return { kind: 'rejected', reason: COPY.empty }
   if (size > MAX_FILE_BYTES) {
-    return { kind: 'rejected', reason: `This file is ${Math.round(size / 1048576)} MB. The limit is ${MAX_FILE_BYTES / 1048576} MB.` }
+    return { kind: 'rejected', reason: COPY.tooBig(Math.round(size / 1048576), MAX_FILE_BYTES / 1048576) }
   }
   if (HEIC_EXT.includes(ext) || mime === 'image/heic' || mime === 'image/heif') return { kind: 'heic' }
   if (OK_EXT.includes(ext) || mime === 'image/jpeg' || mime === 'image/png') return { kind: 'ok' }
-  return { kind: 'rejected', reason: `Unsupported file type (${mime || ext || 'unknown'}). Use JPEG or PNG.` }
+  return { kind: 'rejected', reason: COPY.notAPhoto }
 }
 
 export interface Size {

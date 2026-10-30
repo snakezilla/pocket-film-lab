@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { newItem, updateItem, type Batch, type BatchItem } from '../../src/batch'
 import { Developer } from '../../src/developer'
 import { CancelledError } from '../../src/processor'
+import { FriendlyError } from '../../src/copy'
 
 /** A host with controllable develop() results and a fake clock. */
 function harness(n: number, idleMs = 600) {
@@ -82,11 +83,12 @@ describe('Developer', () => {
     const h = harness(2)
     h.dev.kick()
     await h.flush()
-    h.pending.shift()?.reject(new Error('Could not read'))
+    h.pending.shift()?.reject(new Error('CIRAWFilter decode failed (-50)'))
     await h.flush()
     await h.finish()
     expect(h.batch?.items.map((it) => it.state)).toEqual(['failed', 'ready'])
-    expect(h.batch?.items[0].error).toBe('Could not read')
+    // Technical errors become a friendly line; friendly ones keep their words.
+    expect(h.batch?.items[0].error).toBe('That one didn’t work. Try another photo.')
   })
 
   it('a result for an old batch is dropped and the new batch develops', async () => {
@@ -118,5 +120,14 @@ describe('Developer', () => {
     for (let i = 0; i < 3; i++) await h.finish(null)
     expect(h.calls).toEqual(['k0', 'k0', 'k0'])
     expect(h.dev.busy).toBe(false)
+  })
+
+  it('keeps an error that was written for people', async () => {
+    const h = harness(1)
+    h.dev.kick()
+    await h.flush()
+    h.pending.shift()?.reject(new FriendlyError('That file is empty.'))
+    await h.flush()
+    expect(h.batch?.items[0].error).toBe('That file is empty.')
   })
 })

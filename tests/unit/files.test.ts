@@ -13,7 +13,7 @@ describe('checkFile', () => {
     for (const name of ['x.dng', 'x.CR3', 'x.nef', 'x.ARW', 'x.raf']) {
       const r = checkFile(name, '', 10)
       expect(r.kind).toBe('rejected')
-      if (r.kind === 'rejected') expect(r.reason).toMatch(/RAW/)
+      if (r.kind === 'rejected') expect(r.reason).toMatch(/only opens in the Silver Hour app/)
     }
     expect(checkFile('x', 'image/x-adobe-dng', 10).kind).toBe('rejected')
   })

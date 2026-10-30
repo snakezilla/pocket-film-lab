@@ -1,4 +1,4 @@
-# Film Lab UI design
+# Silver Hour UI design (formerly Film Lab)
 
 ## Brief
 

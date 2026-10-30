@@ -32,15 +32,18 @@ describe('saving a batch', () => {
     expect(maxActive()).toBe(1)
     expect(seen).toEqual(['0/3', '1/3', '2/3', '3/3'])
     expect(report).toEqual({ saved: ['k0', 'k1', 'k2'], failed: [], stopped: false, denied: false })
-    expect(saveSummary(report, 3, 'Saved', ' to Photos')).toBe('Saved 3 photos to Photos.')
+    expect(saveSummary(report, 3, true)).toBe('3 photos saved to your Photos ✓')
+    expect(saveSummary({ ...report, saved: ['k0'] }, 1, true)).toBe('Saved to your Photos ✓')
+    expect(saveSummary(report, 3, false)).toBe('Downloaded 3 photos.')
   })
 
   it('keeps going past a failure and reports it', async () => {
     const { t, log } = target({ failOn: 'b.jpg' })
     const report = await saveAll(items, t, () => undefined, () => false)
     expect(log).toEqual(['a.dng', 'c.dng'])
-    expect(report.failed).toEqual([{ key: 'k1', name: 'b.jpg', error: 'disk full' }])
-    expect(saveSummary(report, 3, 'Saved', ' to Photos')).toBe('Saved 2 of 3 to Photos. b.jpg failed: disk full')
+    // A technical error is never shown; people get a friendly line.
+    expect(report.failed).toEqual([{ key: 'k1', name: 'b.jpg', error: 'That one didn’t work. Try another photo.' }])
+    expect(saveSummary(report, 3, true)).toBe('2 of 3 saved. One didn’t work, so try it again.')
   })
 
   it('denied permission saves nothing', async () => {
@@ -48,7 +51,7 @@ describe('saving a batch', () => {
     const report = await saveAll(items, t, () => undefined, () => false)
     expect(log).toEqual([])
     expect(report.denied).toBe(true)
-    expect(saveSummary(report, 3, 'Saved')).toContain('Settings')
+    expect(saveSummary(report, 3, true)).toBe('Silver Hour needs your OK to add photos. Turn it on in Settings.')
   })
 
   it('stops between photos when asked', async () => {
@@ -57,7 +60,7 @@ describe('saving a batch', () => {
     const report = await saveAll(items, t, () => undefined, () => ++calls > 1)
     expect(log).toEqual(['a.dng'])
     expect(report.stopped).toBe(true)
-    expect(saveSummary(report, 3, 'Saved', ' to Photos')).toBe('Stopped. Saved 1 of 3 to Photos.')
+    expect(saveSummary(report, 3, true)).toBe('Stopped. 1 of 3 saved.')
   })
 
   it('a dismissed share sheet stops without an error', async () => {
