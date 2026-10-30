@@ -4,7 +4,8 @@ import SwiftUI
 struct PocketFilmLabApp: App {
     var body: some Scene {
         WindowGroup {
-            WebView().ignoresSafeArea(.container, edges: .bottom)
+            // Edge to edge: the page pads itself with env(safe-area-inset-*).
+            WebView().ignoresSafeArea()
         }
     }
 }

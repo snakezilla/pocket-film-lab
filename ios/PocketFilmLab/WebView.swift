@@ -59,6 +59,13 @@ struct WebView: UIViewRepresentable {
         #endif
         view.navigationDelegate = context.coordinator
         view.scrollView.contentInsetAdjustmentBehavior = .never
+        // Matches the page's --bg, so nothing flashes white or black around it.
+        let background = UIColor { $0.userInterfaceStyle == .light
+            ? UIColor(red: 0.961, green: 0.949, blue: 0.937, alpha: 1)
+            : UIColor(red: 0.059, green: 0.051, blue: 0.047, alpha: 1) }
+        view.isOpaque = false
+        view.backgroundColor = background
+        view.scrollView.backgroundColor = background
         context.coordinator.share.webView = view
         context.coordinator.raw.webView = view
         if let url = URL(string: "\(BundleSchemeHandler.scheme)://local/index.html") {
