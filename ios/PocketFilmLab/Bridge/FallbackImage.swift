@@ -1,5 +1,6 @@
 import CoreImage
 import Foundation
+import ImageIO
 import UniformTypeIdentifiers
 
 /// A picked photo that is not RAW goes to the web page's existing JPEG/PNG path.
@@ -18,6 +19,21 @@ enum FallbackImage {
 
     static func isRaw(_ url: URL) -> Bool {
         UTType(filenameExtension: url.pathExtension)?.conforms(to: .rawImage) ?? false
+    }
+
+    /// A file the page can load, plus the name it should see. JPEG and PNG are served as
+    /// they are; anything else is written once as a JPEG next to `url` (our temp copy).
+    static func servable(_ url: URL, context: CIContext) throws -> (file: URL, name: String) {
+        if let type = UTType(filenameExtension: url.pathExtension), type.conforms(to: .jpeg) || type.conforms(to: .png) {
+            guard CGImageSourceCreateWithURL(url as CFURL, nil).map(CGImageSourceGetCount) ?? 0 > 0 else {
+                throw Failure.unreadable(url.lastPathComponent)
+            }
+            return (url, url.lastPathComponent)
+        }
+        let (data, name) = try prepare(url, context: context)
+        let out = url.deletingLastPathComponent().appendingPathComponent("served-\(UUID().uuidString.prefix(6)).jpg")
+        try data.write(to: out)
+        return (out, name)
     }
 
     /// Bytes for the page plus the file name it should see.

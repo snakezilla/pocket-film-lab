@@ -35,31 +35,30 @@ final class BridgeTests: XCTestCase {
         web.load(URLRequest(url: URL(string: "app://local/index.html")!))
         await fulfillment(of: [loaded], timeout: 30)
 
-        let copy = tempURL("bridge.dng")
-        try FileManager.default.copyItem(at: TestData.proRAW, to: copy)
-        defer { try? FileManager.default.removeItem(at: copy) }
+        let copy = try XCTUnwrap(RawBridge.copyToTemp(TestData.proRAW))
+        defer { bridge.clear() }
         let opened = expectation(description: "opened")
-        var info: [String: Any] = [:]
-        bridge.startSession(url: copy) { value, error in
+        var id = ""
+        bridge.startBatch(.init(urls: [copy], skipped: 0, truncated: 0)) { value, error in
             XCTAssertNil(error)
-            info = value as? [String: Any] ?? [:]
+            id = ((value as? [String: Any])?["items"] as? [[String: Any]])?.first?["id"] as? String ?? ""
             opened.fulfill()
         }
         await fulfillment(of: [opened], timeout: 30)
-        XCTAssertGreaterThan(info["width"] as? Int ?? 0, 1000)
+        XCTAssertFalse(id.isEmpty)
 
         let js = """
         const out = [];
         for (let i = 0; i < 8; i++) {
           const t0 = performance.now();
-          const r = await window.webkit.messageHandlers.raw.postMessage({ cmd: 'render', maxEdge: 1206,
+          const r = await window.webkit.messageHandlers.raw.postMessage({ cmd: 'render', id, maxEdge: 1206,
             settings: { look: 'vision3-250d-2383', strength: 1, exposure: i * 0.1, grain: 0.35, halation: 0.3 } });
           const img = new Image(); img.src = r.url; await img.decode();
           out.push([performance.now() - t0, r.ms, img.naturalWidth, img.naturalHeight]);
         }
         return out;
         """
-        let result = try await web.callAsyncJavaScript(js, contentWorld: .page) as? [[Double]] ?? []
+        let result = try await web.callAsyncJavaScript(js, arguments: ["id": id], contentWorld: .page) as? [[Double]] ?? []
         XCTAssertEqual(result.count, 8)
         // The first render includes the one-off linear decode; the rest are slider moves.
         let first = result[0]

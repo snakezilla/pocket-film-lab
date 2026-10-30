@@ -20,12 +20,24 @@ struct WebView: UIViewRepresentable {
         }
 
         #if DEBUG
-        /// Screenshots only: with `-PFLDebugOpenRaw <path>`, press "Open RAW" once loaded.
+        /// Screenshots only: with `-PFLDebugOpenRaw <path>[,<path>...]`, press "Choose Photos"
+        /// once loaded. `-PFLDebugAdjust YES` then opens the Adjust panel, and
+        /// `-PFLDebugSave <seconds>` presses Save that many seconds after the pick.
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            guard UserDefaults.standard.string(forKey: "PFLDebugOpenRaw") != nil else { return }
-            // The page wires its RAW buttons after load; give it a moment.
+            let defaults = UserDefaults.standard
+            guard defaults.string(forKey: "PFLDebugOpenRaw") != nil else { return }
+            // The page wires its buttons after load; give it a moment.
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                webView.evaluateJavaScript("document.getElementById('open-raw').click()")
+                webView.evaluateJavaScript("document.getElementById('pick').click()")
+                if defaults.bool(forKey: "PFLDebugAdjust") {
+                    webView.evaluateJavaScript("document.getElementById('adjust').open = true")
+                }
+                let saveAfter = defaults.double(forKey: "PFLDebugSave")
+                if saveAfter > 0 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + saveAfter) {
+                        webView.evaluateJavaScript("document.getElementById('save').click()")
+                    }
+                }
             }
         }
         #endif

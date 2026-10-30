@@ -15,12 +15,14 @@ final class LifecycleTests: XCTestCase {
         bridge = RawBridge()
     }
 
-    /// Copies a sample the way the pickers do (into the bridge's own temp folder) and opens it.
-    private func open(_ source: URL) async throws -> URL {
-        let copy = try XCTUnwrap(bridge.adopt(source))
-        let reply = try await call { self.bridge.startSession(url: copy, reply: $0) }
-        XCTAssertNotNil(reply["width"], "\(reply)")
-        return copy
+    /// Copies a sample the way the pickers do (into a temp folder) and opens it as a
+    /// one-photo batch. Returns the copy and its item id.
+    private func open(_ source: URL) async throws -> (copy: URL, id: String) {
+        let copy = try XCTUnwrap(RawBridge.copyToTemp(source))
+        let reply = try await call { self.bridge.startBatch(.init(urls: [copy], skipped: 0, truncated: 0), reply: $0) }
+        let items = try XCTUnwrap(reply["items"] as? [[String: Any]], "\(reply)")
+        XCTAssertEqual(items.first?["kind"] as? String, "raw")
+        return (copy, try XCTUnwrap(items.first?["id"] as? String))
     }
 
     private func call(_ body: (@escaping (Any?, String?) -> Void) -> Void) async throws -> [String: Any] {
@@ -33,54 +35,66 @@ final class LifecycleTests: XCTestCase {
     }
 
     /// Waits until everything already on the render queue has run.
-    private func drain() async throws { _ = try await call { self.bridge.userContentControllerLooks($0) } }
+    private func drain() async {
+        await withCheckedContinuation { c in bridge.drainQueue { c.resume() } }
+    }
 
-    private let settings: [String: Any] = ["settings": ["look": "vision3-250d-2383", "grain": 0.35, "halation": 0.3], "maxEdge": 1600.0]
+    private func body(_ id: String, _ extra: [String: Any] = [:]) -> [String: Any] {
+        var b: [String: Any] = ["id": id, "settings": ["look": "vision3-250d-2383", "grain": 0.35, "halation": 0.3], "maxEdge": 1600.0]
+        for (k, v) in extra { b[k] = v }
+        return b
+    }
 
     func testSlowRenderThenClearIsDroppedAndCleanedUp() async throws {
-        let copy = try await open(TestData.proRAW)
+        let (copy, id) = try await open(TestData.proRAW)
         // First render after open decodes the RAW (~0.5 s): clear while it runs.
-        let pending = Task { @MainActor in try await self.call { self.bridge.render(self.settings, reply: $0) } }
+        let pending = Task { @MainActor in try await self.call { self.bridge.render(self.body(id), reply: $0) } }
         try await Task.sleep(nanoseconds: 50_000_000)
         bridge.clear()
         let reply = try await pending.value
         XCTAssertEqual(reply["stale"] as? Bool, true, "a render for a cleared file is never shown: \(reply)")
-        try await drain()
+        await drain()
         XCTAssertFalse(FileManager.default.fileExists(atPath: copy.path), "temp copy removed after queued work")
         XCTAssertEqual(PreviewStore.shared.count, 0, "previews dropped")
+        XCTAssertEqual(bridge.sessions.count, 0, "sessions dropped")
         do {
-            _ = try await call { self.bridge.render(self.settings, reply: $0) }
+            _ = try await call { self.bridge.render(self.body(id), reply: $0) }
             XCTFail("render after clear must fail")
         } catch {
-            XCTAssertTrue(error.localizedDescription.contains("No RAW file open"))
+            XCTAssertEqual(error.localizedDescription, RawBridge.closedMessage)
         }
     }
 
     func testSlowRenderThenNewFileShowsOnlyTheNewFile() async throws {
         let first = try await open(TestData.proRAW)
-        let pending = Task { @MainActor in try await self.call { self.bridge.render(self.settings, reply: $0) } }
+        let pending = Task { @MainActor in try await self.call { self.bridge.render(self.body(first.id), reply: $0) } }
         try await Task.sleep(nanoseconds: 50_000_000)
         let second = try await open(TestData.bayer)
         let stale = try await pending.value
         XCTAssertEqual(stale["stale"] as? Bool, true, "\(stale)")
-        let fresh = try await call { self.bridge.render(self.settings, reply: $0) }
+        do {
+            _ = try await call { self.bridge.render(self.body(first.id), reply: $0) }
+            XCTFail("an id from the old batch must not render")
+        } catch {
+            XCTAssertEqual(error.localizedDescription, RawBridge.closedMessage)
+        }
+        let fresh = try await call { self.bridge.render(self.body(second.id), reply: $0) }
         let url = try XCTUnwrap(fresh["url"] as? String)
         let jpeg = try XCTUnwrap(PreviewStore.shared.get(path: URL(string: url)!.path))
         let image = try XCTUnwrap(CIImage(data: jpeg))
         XCTAssertGreaterThan(image.extent.width, image.extent.height, "landscape Bayer, not the portrait ProRAW")
-        try await drain()
-        XCTAssertFalse(FileManager.default.fileExists(atPath: first.path), "old copy removed")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: second.path))
+        await drain()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: first.copy.path), "old copy removed")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: second.copy.path))
         bridge.clear()
     }
 
     func testRapidSlidersOnlyShowTheNewest() async throws {
-        _ = try await open(TestData.bayer)
+        let (_, id) = try await open(TestData.bayer)
         var replies: [[String: Any]] = []
         try await withThrowingTaskGroup(of: [String: Any].self) { group in
             for i in 0..<6 {
-                var body = settings
-                body["settings"] = ["exposure": Double(i) * 0.1]
+                let body = self.body(id, ["settings": ["exposure": Double(i) * 0.1]])
                 group.addTask { @MainActor in try await self.call { self.bridge.render(body, reply: $0) } }
             }
             for try await r in group { replies.append(r) }
@@ -90,11 +104,11 @@ final class LifecycleTests: XCTestCase {
     }
 
     func testExportAfterClearIsNeverShared() async throws {
-        _ = try await open(TestData.bayer)
+        let (_, id) = try await open(TestData.bayer)
         let before = Self.exportFiles()
         let done = expectation(description: "export done")
         var shared: URL?, message: String?
-        bridge.renderExport(["settings": [:] as [String: Any], "format": "heic"]) { file, _, error in
+        bridge.renderExport(["id": id, "settings": [:] as [String: Any], "format": "heic"]) { file, _, error in
             shared = file; message = error; done.fulfill()
         }
         bridge.clear()
@@ -105,10 +119,10 @@ final class LifecycleTests: XCTestCase {
     }
 
     func testExportWhileOpenGivesAFileThenNothingIsLeft() async throws {
-        _ = try await open(TestData.bayer)
+        let (_, id) = try await open(TestData.bayer)
         let done = expectation(description: "export done")
         var shared: URL?
-        bridge.renderExport(["settings": [:] as [String: Any], "format": "jpeg"]) { file, _, _ in shared = file; done.fulfill() }
+        bridge.renderExport(["id": id, "settings": [:] as [String: Any], "format": "jpeg"]) { file, _, _ in shared = file; done.fulfill() }
         await fulfillment(of: [done], timeout: 60)
         let file = try XCTUnwrap(shared)
         let props = Pixels.properties(file)
@@ -118,13 +132,13 @@ final class LifecycleTests: XCTestCase {
     }
 
     func testCancelledPickerKeepsTheOpenFile() async throws {
-        _ = try await open(TestData.bayer)
+        let (_, id) = try await open(TestData.bayer)
         let reply = try await call { reply in
             self.bridge.beginOpen(reply: reply)
             self.bridge.documentPickerWasCancelled(UIDocumentPickerViewController(forOpeningContentTypes: [.rawImage]))
         }
         XCTAssertEqual(reply["cancelled"] as? Bool, true)
-        let still = try await call { self.bridge.render(self.settings, reply: $0) }
+        let still = try await call { self.bridge.render(self.body(id), reply: $0) }
         XCTAssertNotNil(still["url"], "a cancelled picker does not close the current file")
         bridge.clear()
     }
@@ -137,23 +151,28 @@ final class LifecycleTests: XCTestCase {
         bridge.clear()
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.rawImage])
         bridge.documentPicker(picker, didPickDocumentsAt: [TestData.bayer])
-        try await drain()
-        try await drain() // startSession's reply hops queue -> main
-        XCTAssertFalse(bridge.hasSession, "a late pick after clear must not open a file")
-        XCTAssertFalse(replies.contains { $0["width"] != nil }, "no session reply after clear: \(replies)")
-        XCTAssertNil(bridge.openCopyDirectory, "no temp copy left behind")
+        await drain() // the copy runs on the render queue, then hops to main
+        await drain()
+        XCTAssertFalse(bridge.hasItems, "a late pick after clear must not open a file")
+        XCTAssertFalse(replies.contains { $0["items"] != nil }, "no batch reply after clear: \(replies)")
+        XCTAssertTrue(bridge.copyDirs.isEmpty, "no temp copy left behind")
     }
 
     func testFailedImportReportsAnError() async throws {
-        let broken = tempURL("broken.heic")
-        try Data("not an image".utf8).write(to: broken)
-        defer { try? FileManager.default.removeItem(at: broken) }
+        let broken = try XCTUnwrap(RawBridge.copyToTemp(try { () throws -> URL in
+            let url = tempURL("broken.heic")
+            try Data("not an image".utf8).write(to: url)
+            return url
+        }()))
+        let reply = try await call { self.bridge.startBatch(.init(urls: [broken], skipped: 0, truncated: 0), reply: $0) }
+        let id = try XCTUnwrap((reply["items"] as? [[String: Any]])?.first?["id"] as? String)
         do {
-            _ = try await call { self.bridge.startSession(url: broken, reply: $0) }
+            _ = try await call { self.bridge.handle("source", ["id": id], reply: $0) }
             XCTFail("expected an error")
         } catch {
-            XCTAssertFalse(error.localizedDescription.isEmpty)
+            XCTAssertTrue(error.localizedDescription.contains("Could not read"), error.localizedDescription)
         }
+        bridge.clear()
     }
 
     /// Images whose extent does not start at (0, 0) render and export the same pixels.
