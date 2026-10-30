@@ -18,7 +18,7 @@ export function checkFile(name: string, type: string, size: number): FileCheck {
   const ext = (name.split('.').pop() ?? '').toLowerCase()
   const mime = type.toLowerCase()
   if (RAW_EXT.includes(ext) || mime.includes('raw') || mime === 'image/x-adobe-dng' || mime === 'image/dng') {
-    return { kind: 'rejected', reason: 'RAW files are not supported yet. This app only reads JPEG and PNG; it has no RAW development.' }
+    return { kind: 'rejected', reason: 'RAW files need the Film Lab iOS app. In a browser, use JPEG or PNG.' }
   }
   if (size === 0) return { kind: 'rejected', reason: 'This file is empty.' }
   if (size > MAX_FILE_BYTES) {
@@ -63,7 +63,9 @@ export function downscaleSteps(width: number, height: number, target: Size): Siz
   return steps
 }
 
-export function exportName(now: Date): string {
+/** film-YYYYMMDD-HHMMSS.jpg; `index` (1-based) tells apart files saved in the same second. */
+export function exportName(now: Date, index?: number): string {
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `film-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.jpg`
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+  return `film-${stamp}${index === undefined ? '' : `-${pad(index)}`}.jpg`
 }

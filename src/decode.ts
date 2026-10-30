@@ -15,6 +15,27 @@ export interface DecodedPhoto {
  * canvas carries no metadata, so EXIF/GPS never reach the export.
  */
 export async function decodePhoto(file: File, check: FileCheck): Promise<DecodedPhoto> {
+  return withImage(file, check, (img, sw, sh) => {
+    const work = drawScaled(img, sw, sh, fitSize(sw, sh, WORK_EDGE))
+    const preview = drawScaled(work, work.width, work.height, fitSize(work.width, work.height, PREVIEW_EDGE))
+    const result = { work: readPixels(work), preview: readPixels(preview), sourceWidth: sw, sourceHeight: sh }
+    release(work)
+    release(preview)
+    return result
+  })
+}
+
+/** Only the preview (PREVIEW_EDGE), for showing a photo; less memory than decodePhoto. */
+export async function decodePreview(file: File, check: FileCheck): Promise<{ readonly preview: ImageData; readonly sourceWidth: number; readonly sourceHeight: number }> {
+  return withImage(file, check, (img, sw, sh) => {
+    const canvas = drawScaled(img, sw, sh, fitSize(sw, sh, PREVIEW_EDGE))
+    const preview = readPixels(canvas)
+    release(canvas)
+    return { preview, sourceWidth: sw, sourceHeight: sh }
+  })
+}
+
+async function withImage<T>(file: File, check: FileCheck, use: (img: HTMLImageElement, sw: number, sh: number) => T): Promise<T> {
   const url = URL.createObjectURL(file)
   try {
     const img = new Image()
@@ -29,16 +50,7 @@ export async function decodePhoto(file: File, check: FileCheck): Promise<Decoded
           : 'Could not read this image. The file may be damaged or too large for this device.',
       )
     }
-    const sw = img.naturalWidth
-    const sh = img.naturalHeight
-    const workSize = fitSize(sw, sh, WORK_EDGE)
-    const work = drawScaled(img, sw, sh, workSize)
-    const previewSize = fitSize(work.width, work.height, PREVIEW_EDGE)
-    const preview = drawScaled(work, work.width, work.height, previewSize)
-    const result = { work: readPixels(work), preview: readPixels(preview), sourceWidth: sw, sourceHeight: sh }
-    release(work)
-    release(preview)
-    return result
+    return use(img, img.naturalWidth, img.naturalHeight)
   } finally {
     URL.revokeObjectURL(url)
   }

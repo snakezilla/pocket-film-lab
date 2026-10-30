@@ -40,5 +40,6 @@ describe('sizing', () => {
   })
   it('names exports by local time', () => {
     expect(exportName(new Date(2026, 9, 29, 7, 5, 3))).toBe('film-20261029-070503.jpg')
+    expect(exportName(new Date(2026, 9, 29, 7, 5, 3), 3)).toBe('film-20261029-070503-03.jpg')
   })
 })

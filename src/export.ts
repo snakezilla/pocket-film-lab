@@ -39,6 +39,12 @@ export async function saveJpeg(blob: Blob, name: string): Promise<SaveOutcome> {
       // NotAllowedError etc.: fall through to a plain download.
     }
   }
+  downloadBlob(blob, name)
+  return 'downloaded'
+}
+
+/** A plain download (Files on iPhone, the Downloads folder on a computer). */
+export function downloadBlob(blob: Blob, name: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -47,5 +53,4 @@ export async function saveJpeg(blob: Blob, name: string): Promise<SaveOutcome> {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 30_000)
-  return 'downloaded'
 }

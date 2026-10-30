@@ -1,9 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { nativeRaw } from '../../src/native'
+import { canSaveWith, nativeRaw, toBase64 } from '../../src/native'
 
 const g = globalThis as unknown as { window?: unknown }
+const settings = { look: 'vision3-250d-2383', strength: 1, exposure: 0, grain: 0.35, halation: 0.3, softness: 0, warmth: 0 }
 
-describe('native RAW bridge client', () => {
+function withHandler(postMessage: (body: Record<string, unknown>) => Promise<unknown>) {
+  const spy = vi.fn(postMessage)
+  g.window = { webkit: { messageHandlers: { raw: { postMessage: spy } } } }
+  return { bridge: nativeRaw()!, spy }
+}
+
+describe('native bridge client', () => {
   afterEach(() => {
     delete g.window
   })
@@ -13,45 +20,61 @@ describe('native RAW bridge client', () => {
     expect(nativeRaw()).toBeNull()
   })
 
-  it('sends commands and unwraps replies', async () => {
-    const postMessage = vi.fn(async (body: { cmd: string }) => {
+  it('sends commands with the item id and unwraps replies', async () => {
+    const { bridge, spy } = withHandler(async (body) => {
       if (body.cmd === 'looks') return { looks: [{ id: 'vision3-250d-2383', label: '250D Print' }] }
-      if (body.cmd === 'open') return { cancelled: true }
-      if (body.cmd === 'render') return { url: 'app://local/__raw/p1.jpg', ms: 40 }
+      if (body.cmd === 'render') return { url: 'app://local/__raw/p1.jpg', ms: 40, info: { width: 4032, height: 3024, wbTemp: 5200, wbTint: 6 } }
+      if (body.cmd === 'saveAccess') return { access: 'limited' }
+      if (body.cmd === 'save' || body.cmd === 'saveData') return { saved: true }
       throw new Error('boom')
     })
-    g.window = { webkit: { messageHandlers: { raw: { postMessage } } } }
-    const bridge = nativeRaw()
-    expect(bridge).not.toBeNull()
-    expect(await bridge!.looks()).toEqual([{ id: 'vision3-250d-2383', label: '250D Print' }])
-    expect(await bridge!.open('photos')).toBeNull()
-    const settings = { look: 'vision3-250d-2383', strength: 1, exposure: 0, grain: 0.35, halation: 0.3, softness: 0, warmth: 0, wbTemp: 5200, wbTint: 6 }
-    expect(await bridge!.render(settings, false, 1600)).toEqual({ url: 'app://local/__raw/p1.jpg', ms: 40 })
-    expect(postMessage).toHaveBeenLastCalledWith({ cmd: 'render', settings, compare: false, maxEdge: 1600 })
-    await expect(bridge!.exportFile(settings, 'heic')).rejects.toThrow('boom')
+    expect(await bridge.looks()).toEqual([{ id: 'vision3-250d-2383', label: '250D Print' }])
+    const res = await bridge.render('i1', settings, { compare: false, maxEdge: 1600, hero: true })
+    expect(res).toMatchObject({ url: 'app://local/__raw/p1.jpg' })
+    expect(spy).toHaveBeenLastCalledWith({ cmd: 'render', id: 'i1', settings, compare: false, maxEdge: 1600, hero: true })
+    expect(await bridge.saveAccess()).toBe('limited')
+    await bridge.save('i1', settings, 'heic')
+    expect(spy).toHaveBeenLastCalledWith({ cmd: 'save', id: 'i1', settings, format: 'heic' })
+    await bridge.saveData('film.jpg', new Blob([new Uint8Array([0xff, 0xd8, 0xff])]))
+    expect(spy).toHaveBeenLastCalledWith({ cmd: 'saveData', name: 'film.jpg', data: '/9j/' })
+    await expect(bridge.exportFile('i1', settings, 'heic')).rejects.toThrow('boom')
   })
 
-  it('tells a RAW apart from a JPEG/PNG fallback', async () => {
+  it('returns the picked items, or null for a cancelled or stale pick', async () => {
     const replies: unknown[] = [
-      { name: 'a.dng', width: 4032, height: 3024, wbTemp: 5200, wbTint: 6 },
-      { fallback: { url: 'app://local/__raw/p2.png', name: 'b.png' } },
+      { items: [{ id: 'i1', kind: 'raw', name: 'a.dng' }, { id: 'i2', kind: 'photo', name: 'b.jpg' }], skipped: 1, truncated: 0 },
+      { cancelled: true },
+      { stale: true },
     ]
-    const postMessage = vi.fn(async () => replies.shift())
-    g.window = { webkit: { messageHandlers: { raw: { postMessage } } } }
-    const bridge = nativeRaw()!
-    expect(await bridge.open('files')).toEqual({ raw: { name: 'a.dng', width: 4032, height: 3024, wbTemp: 5200, wbTint: 6 } })
-    expect(await bridge.open('photos')).toEqual({ photo: { url: 'app://local/__raw/p2.png', name: 'b.png' } })
+    const { bridge } = withHandler(async () => replies.shift())
+    expect(await bridge.open('photos')).toEqual({
+      items: [{ id: 'i1', kind: 'raw', name: 'a.dng' }, { id: 'i2', kind: 'photo', name: 'b.jpg' }],
+      skipped: 1,
+      truncated: 0,
+    })
+    expect(await bridge.open('files')).toBeNull()
+    expect(await bridge.open('photos')).toBeNull()
+  })
+
+  it('serves a non-RAW source, or null when the batch changed', async () => {
+    const replies: unknown[] = [{ url: 'app://local/__raw/s1.jpg', name: 'b.jpg' }, { stale: true }]
+    const { bridge } = withHandler(async () => replies.shift())
+    expect(await bridge.source('i2')).toEqual({ url: 'app://local/__raw/s1.jpg', name: 'b.jpg' })
+    expect(await bridge.source('i2')).toBeNull()
   })
 })
 
-describe('native open replies', () => {
-  afterEach(() => {
-    delete (globalThis as unknown as { window?: unknown }).window
+describe('helpers', () => {
+  it('only authorized or limited access can save', () => {
+    expect(canSaveWith('authorized')).toBe(true)
+    expect(canSaveWith('limited')).toBe(true)
+    expect(canSaveWith('denied')).toBe(false)
+    expect(canSaveWith('notDetermined')).toBe(false)
   })
 
-  it('treats a stale open (file closed or replaced meanwhile) as no file', async () => {
-    const postMessage = vi.fn(async () => ({ stale: true }))
-    ;(globalThis as unknown as { window?: unknown }).window = { webkit: { messageHandlers: { raw: { postMessage } } } }
-    expect(await nativeRaw()!.open('photos')).toBeNull()
+  it('base64-encodes large blobs in chunks', async () => {
+    const bytes = new Uint8Array(100_000).map((_, i) => i % 251)
+    const b64 = await toBase64(new Blob([bytes]))
+    expect(Buffer.from(b64, 'base64').equals(Buffer.from(bytes))).toBe(true)
   })
 })
