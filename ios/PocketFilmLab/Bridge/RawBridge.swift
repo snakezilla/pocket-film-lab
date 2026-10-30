@@ -156,6 +156,10 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
                 let url = PreviewStore.shared.put(jpeg)
                 let ms = (CFAbsoluteTimeGetCurrent() - start) * 1000
                 DispatchQueue.main.async { reply(["url": url, "ms": ms], nil) }
+                // Idle work after the preview is out: get the WB fitter ready. Runs on
+                // the render queue, so it only delays a render that is already waiting. If it
+                // fails, the first WB change builds the fitter itself and reports the error.
+                if !session.isWhiteBalanceReady { self.queue.async { try? session.prepareWhiteBalance() } }
             } catch {
                 DispatchQueue.main.async { reply(nil, error.localizedDescription) }
             }

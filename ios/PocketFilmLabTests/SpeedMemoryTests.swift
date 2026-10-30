@@ -45,6 +45,30 @@ final class SpeedMemoryTests: XCTestCase {
         }
     }
 
+    /// With the fitter pre-warmed (as the bridge does after the first preview), the
+    /// first WB change costs the same as later ones.
+    func testPrewarmedFirstWhiteBalanceChange() throws {
+        var cold: [Double] = [], warm: [Double] = []
+        for prewarm in [false, true] {
+            for _ in 0..<2 {
+                let session = try RawSession(url: TestData.proRAW, engine: engine)
+                var s = FilmSettings()
+                _ = try session.previewJPEG(settings: s, maxEdge: 1600, compare: false)
+                if prewarm {
+                    try session.prepareWhiteBalance()
+                    XCTAssertTrue(session.isWhiteBalanceReady)
+                }
+                s.whiteBalance = WhiteBalance(temperature: session.asShot.temperature + 800, tint: session.asShot.tint)
+                let t0 = Date()
+                _ = try session.previewJPEG(settings: s, maxEdge: 1600, compare: false)
+                let ms = Date().timeIntervalSince(t0) * 1000
+                if prewarm { warm.append(ms) } else { cold.append(ms) }
+            }
+        }
+        print(String(format: "WB first change: cold %.0f / %.0f ms, pre-warmed %.0f / %.0f ms", cold[0], cold[1], warm[0], warm[1]))
+        XCTAssertLessThan(warm.min()!, cold.min()!)
+    }
+
     /// 47 MP: open, first preview (reduced decode) and slider moves, with memory.
     func testLargeFilePreviewPath() throws {
         let start = physFootprint()

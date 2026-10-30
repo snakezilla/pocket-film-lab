@@ -59,6 +59,17 @@ final class RawSession {
         return m
     }
 
+    /// Builds the white-balance fitter ahead of time, so the first WB change costs
+    /// the same as later ones (~110 ms instead of ~230 ms on the simulator). Does
+    /// nothing if there is no preview yet or the fitter already exists.
+    /// Call on the same queue as the renders.
+    func prepareWhiteBalance() throws {
+        guard fastWhiteBalance, let c = cached, fitter == nil || fitter?.base != c.wb else { return }
+        fitter = try WhiteBalanceMatrix.Fitter(url: url, nativeSize: nativeSize, base: c.wb, context: engine.context)
+    }
+
+    var isWhiteBalanceReady: Bool { fitter != nil && fitter?.base == cached?.wb }
+
     /// JPEG preview. `compare` gives the plain decode (no film look) for hold-to-compare.
     func previewJPEG(settings: FilmSettings, maxEdge: CGFloat, compare: Bool) throws -> Data {
         let linear = engine.applyExposure(try linearPreview(wb: settings.whiteBalance, maxEdge: maxEdge), ev: settings.exposure)
