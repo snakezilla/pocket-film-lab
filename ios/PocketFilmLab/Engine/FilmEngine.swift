@@ -14,6 +14,8 @@ struct FilmSettings: Equatable {
     var halation: Float = 0
     /// 0...1. Gentle softening, off by default.
     var softness: Float = 0
+    /// 0...1. Optional warm (cream) near-whites. 0 keeps greys neutral, the baseline.
+    var warmth: Float = 0
     /// Shifts the grain field. Fixed by default so renders are repeatable.
     var grainSeed: CGFloat = 0
 }
@@ -62,7 +64,8 @@ final class FilmEngine {
         let look = try lut(settings.lookID)
         let softened = FilmTexture.soften(linear, amount: clamp01(settings.softness))
         let halated = try FilmTexture.halation(softened, amount: clamp01(settings.halation))
-        let film = try FilmLookKernel.apply(halated, cube: cubeImage(for: look), lut: look)
+        let film = try FilmLookKernel.warm(
+            try FilmLookKernel.apply(halated, cube: cubeImage(for: look), lut: look), amount: clamp01(settings.warmth))
         let strength = clamp01(settings.strength)
         // Mix in linear light. At 0 this is the plain linear decode, clipped on output.
         let mixed = strength >= 1 ? film : film.applyingFilter("CIDissolveTransition", parameters: [

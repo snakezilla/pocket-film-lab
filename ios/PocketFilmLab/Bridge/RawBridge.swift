@@ -291,6 +291,7 @@ extension RawBridge: WKScriptMessageHandlerWithReply {
         s.grain = num("grain", 0, 1, 0)
         s.halation = num("halation", 0, 1, 0)
         s.softness = num("softness", 0, 1, 0)
+        s.warmth = num("warmth", 0, 1, 0)
         if d["wbTemp"] is Double, d["wbTint"] is Double {
             s.whiteBalance = WhiteBalance(temperature: num("wbTemp", 1800, 50_000, 6500), tint: num("wbTint", -150, 150, 0))
         }

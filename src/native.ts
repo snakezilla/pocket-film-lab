@@ -33,6 +33,8 @@ export interface RawSettings {
   readonly halation: number
   /** 0…1, off by default. Gentle scene-linear softening (native engine only). */
   readonly softness: number
+  /** 0…1, off by default. Optional cream near-whites; 0 keeps greys neutral. */
+  readonly warmth: number
   readonly wbTemp: number
   readonly wbTint: number
 }

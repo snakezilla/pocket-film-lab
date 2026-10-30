@@ -41,6 +41,7 @@ const ui = {
   rawOnly: $('raw-only'),
   wbTemp: $<HTMLInputElement>('wbTemp'),
   soft: $<HTMLInputElement>('soft'),
+  warm: $<HTMLInputElement>('warm'),
   wbTint: $<HTMLInputElement>('wbTint'),
   exportHeic: $<HTMLButtonElement>('export-heic'),
 }
@@ -250,7 +251,7 @@ function wire(): void {
       void renderPreview()
     })
   }
-  for (const input of [ui.wbTemp, ui.wbTint, ui.soft]) {
+  for (const input of [ui.wbTemp, ui.wbTint, ui.soft, ui.warm]) {
     input.addEventListener('input', () => {
       if (input === ui.wbTemp) wbTouched = { ...wbTouched, temp: true }
       if (input === ui.wbTint) wbTouched = { ...wbTouched, tint: true }
@@ -295,6 +296,7 @@ function rawSettings(): RawSettings {
     grain: r.grain,
     halation: r.halo,
     softness: Number(ui.soft.value),
+    warmth: Number(ui.warm.value),
     wbTemp: wbValue(Number(ui.wbTemp.value), raw?.file?.wbTemp, wbTouched.temp),
     wbTint: wbValue(Number(ui.wbTint.value), raw?.file?.wbTint, wbTouched.tint),
   }
@@ -313,6 +315,7 @@ function syncWb(): void {
   const tint = Number(ui.wbTint.value)
   $<HTMLOutputElement>('wbTint-v').textContent = `${tint > 0 ? '+' : ''}${tint.toFixed(0)}`
   $<HTMLOutputElement>('soft-v').textContent = Number(ui.soft.value).toFixed(2)
+  $<HTMLOutputElement>('warm-v').textContent = Number(ui.warm.value).toFixed(2)
 }
 
 function buildRawLookButtons(): void {
@@ -351,6 +354,7 @@ function resetRaw(): void {
     ui.wbTint.value = String(info.wbTint)
   }
   ui.soft.value = String(RAW_DEFAULTS.softness)
+  ui.warm.value = String(RAW_DEFAULTS.warmth)
   syncControls()
   syncWb()
   raw?.invalidateCompare()

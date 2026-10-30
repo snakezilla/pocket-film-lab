@@ -30,8 +30,27 @@ final class FilmLookTests: XCTestCase {
         let px = Pixels.floats(out, context: engine.context)
         for (i, stop) in stops.enumerated() {
             let r = px[i * 4], g = px[i * 4 + 1], b = px[i * 4 + 2]
-            assertGreyOrWarmHighlight(r, g, b, "stop \(stop)")
+            assertNeutral(r, g, b, "stop \(stop)")
         }
+    }
+
+    /// Optional warmth: greys up to +1 stop untouched, near-whites cream (R > G > B,
+    /// about b* +9 at +4 stops), and 0 gives back the neutral render exactly.
+    func testWarmthIsOptionalAndOnlyWarmsHighlights() throws {
+        let (stops, strip) = greyStops()
+        var warm = FilmSettings(); warm.warmth = 1
+        let a = Pixels.floats(try engine.applyFilm(to: strip, settings: FilmSettings()), context: engine.context)
+        let b = Pixels.floats(try engine.applyFilm(to: strip, settings: warm), context: engine.context)
+        for (i, stop) in stops.enumerated() {
+            let (r, g, bl) = (b[i * 4], b[i * 4 + 1], b[i * 4 + 2])
+            if stop <= 1 {
+                XCTAssertEqual(r, a[i * 4], accuracy: 1e-4); XCTAssertEqual(bl, a[i * 4 + 2], accuracy: 1e-4)
+            } else if stop >= 3 {
+                XCTAssertGreaterThan(r, g, "stop \(stop)"); XCTAssertGreaterThan(g, bl, "stop \(stop)")
+                XCTAssertGreaterThan(bl / g, 0.8); XCTAssertLessThan(r / g, 1.05)
+            }
+        }
+        XCTAssertTrue(try FilmLookKernel.warm(strip, amount: 0) === strip)
     }
 
     /// Tone curve on the grey axis, printed for the record (measurements/RAW-TONE.md).
@@ -93,17 +112,9 @@ final class FilmLookTests: XCTestCase {
     }
 }
 
-/// Greys up to about +1 stop (display Y < 0.36) stay neutral within 1% (or 0.0005 in deep
-/// shadow). Above that the print warms near-whites on purpose (make_raw_lut.py,
-/// HIGHLIGHT_WARM, tuning pass 2): R >= G >= B, with B no lower than 0.8 x G (about b* +9).
-func assertGreyOrWarmHighlight(_ r: Float, _ g: Float, _ b: Float, _ label: String, file: StaticString = #filePath, line: UInt = #line) {
-    if g < 0.34 {
-        let spread = max(r, g, b) - min(r, g, b)
-        XCTAssertLessThan(spread, max(0.01 * g, 0.0005), "\(label): \(r) \(g) \(b)", file: file, line: line)
-    } else {
-        XCTAssertGreaterThanOrEqual(r, g * 0.999, "\(label) highlight not warm: \(r) \(g) \(b)", file: file, line: line)
-        XCTAssertGreaterThanOrEqual(g, b, "\(label) highlight not warm: \(r) \(g) \(b)", file: file, line: line)
-        XCTAssertGreaterThan(b / g, 0.8, "\(label) highlight too yellow: \(r) \(g) \(b)", file: file, line: line)
-        XCTAssertLessThan(r / g, 1.05, "\(label) highlight too red: \(r) \(g) \(b)", file: file, line: line)
-    }
+/// Greys stay neutral within 1% per channel (or 0.0005 in deep shadow) at every stop.
+/// This is the baseline; warm highlights are an optional setting (`warmth`, default 0).
+func assertNeutral(_ r: Float, _ g: Float, _ b: Float, _ label: String, file: StaticString = #filePath, line: UInt = #line) {
+    let spread = max(r, g, b) - min(r, g, b)
+    XCTAssertLessThan(spread, max(0.01 * g, 0.0005), "\(label): \(r) \(g) \(b)", file: file, line: line)
 }

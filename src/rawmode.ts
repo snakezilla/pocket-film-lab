@@ -9,7 +9,7 @@ export interface RawUi {
   readonly say: (message: string, isError?: boolean) => void
 }
 
-export const RAW_DEFAULTS = { strength: 1, exposure: 0, grain: 0.35, halation: 0.3, softness: 0 } as const
+export const RAW_DEFAULTS = { strength: 1, exposure: 0, grain: 0.35, halation: 0.3, softness: 0, warmth: 0 } as const
 
 export interface SliderRange {
   readonly min: number

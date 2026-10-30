@@ -24,6 +24,28 @@ enum FilmLookKernel {
         }
     }()
 
+    private static let warmKernel: Result<CIColorKernel, Error> = {
+        Result {
+            guard let url = Bundle(for: BundleToken.self).url(forResource: "default", withExtension: "metallib") else {
+                throw FilmKernelError.missingLibrary
+            }
+            return try CIColorKernel(functionName: "warmHighlights", fromMetalLibraryData: Data(contentsOf: url))
+        }
+    }()
+
+    /// Warm highlight gains at warmth = 1 and the display-Y ramp (from make_raw_lut.py).
+    static let warmGains = CIVector(x: 1.037, y: 1.0051, z: 0.84)
+    static let warmRamp: (Float, Float) = (0.36, 0.64)
+
+    /// Optional cream near-whites. `amount` 0 returns the input unchanged (neutral baseline).
+    static func warm(_ image: CIImage, amount: Float) throws -> CIImage {
+        guard amount > 0 else { return image }
+        guard let out = try warmKernel.get().apply(
+            extent: image.extent, arguments: [image, amount, warmGains, warmRamp.0, warmRamp.1]
+        ) else { throw FilmKernelError.applyFailed }
+        return out
+    }
+
     /// The cube as a float image, `size` wide and `size * size` tall, no colour management.
     /// Core Image puts the first bitmap row at the top; the kernel wants row 0 at y = 0,
     /// so the image is flipped vertically (pixel-aligned, no resampling).

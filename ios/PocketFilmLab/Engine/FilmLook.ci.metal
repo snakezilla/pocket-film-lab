@@ -24,5 +24,16 @@ float4 filmLook(sampler src, sampler cube, float size, float midGrey, float logM
     return float4(mix(c0.rgb, c1.rgb, fb), s.a);
 }
 
+// Optional warm highlights (the `warmth` setting, default 0), display-linear in and out.
+// Same gains and smoothstep ramp over display Y as tools/make_raw_lut.py HIGHLIGHT_WARM,
+// so greys below y0 (about +1 stop) are untouched and near-whites go cream.
+float4 warmHighlights(sample_t s, float amount, float3 gains, float y0, float y1) {
+    float y = dot(s.rgb, float3(0.2126, 0.7152, 0.0722));
+    float t = clamp((y - y0) / (y1 - y0), 0.0, 1.0);
+    t = t * t * (3.0 - 2.0 * t);
+    float3 g = 1.0 + (gains - 1.0) * (t * amount);
+    return float4(clamp(s.rgb * g, 0.0, 1.0), s.a);
+}
+
 }
 }

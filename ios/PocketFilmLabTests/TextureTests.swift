@@ -28,7 +28,7 @@ final class TextureTests: XCTestCase {
                 var s = FilmSettings(); s.lookID = id
                 let out = try engine.applyFilm(to: flat(v, size: 4), settings: s)
                 let px = Pixels.floats(out, context: engine.context)
-                assertGreyOrWarmHighlight(px[0], px[1], px[2], "\(id) stop \(stop)")
+                assertNeutral(px[0], px[1], px[2], "\(id) stop \(stop)")
             }
         }
     }

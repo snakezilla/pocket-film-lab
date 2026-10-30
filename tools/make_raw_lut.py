@@ -84,6 +84,10 @@ CHROMA_SHADOW_Y = 0.01 # below this the scale eases back toward 1 (film already 
 # measured (the tint is already strong at L* 76); the smoothstep shape is judged.
 # Greys below HIGHLIGHT_WARM_Y0 (about +1 stop) stay neutral.
 HIGHLIGHT_WARM = (1.037, 1.0051, 0.84)  # R, G, B gains at full strength (G keeps Y)
+# The cube is neutral (owner direction 2026-10-30: neutral baseline, warmth optional and
+# reversible). The warm gains above are applied at runtime by the `warmth` setting
+# (FilmLook.ci.metal warmHighlights, same gains and ramp), default 0.
+WARM_IN_CUBE = False
 HIGHLIGHT_WARM_Y0 = 0.36                # display Y, L* 66
 HIGHLIGHT_WARM_Y1 = 0.64                # display Y, L* 84
 # Toe. Measured direction: both pairs keep the very bottom lifted but are ~21-25 codes darker
@@ -93,7 +97,7 @@ HIGHLIGHT_WARM_Y1 = 0.64                # display Y, L* 84
 # x0.68 on a daylight sky, mezha1 lost all of it. We take the gentler pair, rounded:
 # x0.7 on hues 200-290 deg (Lab), ramping in from display Y 0.2 to 0.45 (L* ~52-73),
 # so dusk and deep blues (darker) keep their colour. Amount measured, ramp judged.
-BLUE_HIGH_CHROMA = 0.7
+BLUE_HIGH_CHROMA = 1.0   # OFF (owner direction 2026-10-30: scene quantiles are not a calibrated transform); was 0.7
 BLUE_HUE = (200.0, 290.0)   # Lab hue, degrees; edges fade over 15 deg
 BLUE_Y = (0.2, 0.45)
 
@@ -208,7 +212,8 @@ def grade(table):
     y = luminance(table)[..., None]
     k = chroma_scale(y[..., 0]) * sky_scale(table, y[..., 0])
     graded = np.clip(y + (table - y) * k[..., None], 0, 1)
-    graded = np.clip(graded * toe_gain(y[..., 0])[..., None] * warm_gains(y[..., 0]), 0, 1)
+    warm = warm_gains(y[..., 0]) if WARM_IN_CUBE else 1.0
+    graded = np.clip(graded * toe_gain(y[..., 0])[..., None] * warm, 0, 1)
     return BLACK_LIFT + graded * (1 - BLACK_LIFT)
 
 
@@ -279,7 +284,7 @@ def main():
             "greyRampStops": [int(x) for x in stops],
             "grade": {"blackLift": BLACK_LIFT, "chromaMid": CHROMA_MID, "chromaHigh": CHROMA_HIGH, "chromaHighY": CHROMA_HIGH_Y,
                       "blueHighChroma": BLUE_HIGH_CHROMA, "blueHue": list(BLUE_HUE), "blueY": list(BLUE_Y),
-                      "toeLift": TOE_LIFT, "toePeakY": TOE_PEAK_Y, "highlightWarm": list(HIGHLIGHT_WARM),
+                      "toeLift": TOE_LIFT, "toePeakY": TOE_PEAK_Y, "warmInCube": WARM_IN_CUBE, "highlightWarm": list(HIGHLIGHT_WARM),
                       "highlightWarmY": [HIGHLIGHT_WARM_Y0, HIGHLIGHT_WARM_Y1]},
             "chromaReport": report,
             "greyRampOutLinear": [[round(float(c), 6) for c in row] for row in exact],

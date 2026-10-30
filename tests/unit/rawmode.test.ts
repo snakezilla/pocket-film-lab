@@ -37,7 +37,7 @@ describe('white balance value sent to the engine', () => {
 describe('RawMode lifecycle', () => {
   const g = globalThis as unknown as { window?: unknown }
   const info = { name: 'a.dng', width: 4032, height: 3024, wbTemp: 5200, wbTint: 6 }
-  const settings = () => ({ look: 'x', strength: 1, exposure: 0, grain: 0, halation: 0, softness: 0, wbTemp: 5200, wbTint: 6 })
+  const settings = () => ({ look: 'x', strength: 1, exposure: 0, grain: 0, halation: 0, softness: 0, warmth: 0, wbTemp: 5200, wbTint: 6 })
 
   function setup() {
     g.window = { devicePixelRatio: 2 }
