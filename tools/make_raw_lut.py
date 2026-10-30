@@ -89,6 +89,14 @@ HIGHLIGHT_WARM_Y1 = 0.64                # display Y, L* 84
 # Toe. Measured direction: both pairs keep the very bottom lifted but are ~21-25 codes darker
 # at p25 than the phone render; ours is ~31 darker than our plain render, so slightly too
 # dense. The size (+0.16 stop at code ~32) is a weak estimate: exposure is unknown in both.
+# Pale blue skies lose chroma (LOOK-TRAITS tuning pass 2): the cakesauce pair measured
+# x0.68 on a daylight sky, mezha1 lost all of it. We take the gentler pair, rounded:
+# x0.7 on hues 200-290 deg (Lab), ramping in from display Y 0.2 to 0.45 (L* ~52-73),
+# so dusk and deep blues (darker) keep their colour. Amount measured, ramp judged.
+BLUE_HIGH_CHROMA = 0.7
+BLUE_HUE = (200.0, 290.0)   # Lab hue, degrees; edges fade over 15 deg
+BLUE_Y = (0.2, 0.45)
+
 TOE_LIFT = 1.12        # gain on display Y at TOE_PEAK_Y
 TOE_PEAK_Y = 0.015     # sRGB code ~32
 TOE_LOW_Y, TOE_HIGH_Y = 0.004, 0.08  # the gain eases back to 1 at these (log-space smoothstep)
@@ -185,9 +193,21 @@ def warm_gains(y):
     return 1 + (np.array(HIGHLIGHT_WARM) - 1) * w
 
 
+def sky_scale(table, y):
+    """Chroma scale for pale blues: BLUE_HIGH_CHROMA inside the hue band and above BLUE_Y."""
+    xyz = colour.RGB_to_XYZ(np.clip(table, 0, None), REC709, apply_cctf_decoding=False)
+    lab = colour.XYZ_to_Lab(xyz)
+    h = np.degrees(np.arctan2(lab[..., 2], lab[..., 1])) % 360
+    lo, hi = BLUE_HUE
+    w_hue = smoothstep(h, lo - 15, lo) * (1 - smoothstep(h, hi, hi + 15))
+    w = w_hue * smoothstep(y, *BLUE_Y)
+    return 1 + (BLUE_HIGH_CHROMA - 1) * w
+
+
 def grade(table):
     y = luminance(table)[..., None]
-    graded = np.clip(y + (table - y) * chroma_scale(y[..., 0])[..., None], 0, 1)
+    k = chroma_scale(y[..., 0]) * sky_scale(table, y[..., 0])
+    graded = np.clip(y + (table - y) * k[..., None], 0, 1)
     graded = np.clip(graded * toe_gain(y[..., 0])[..., None] * warm_gains(y[..., 0]), 0, 1)
     return BLACK_LIFT + graded * (1 - BLACK_LIFT)
 
@@ -258,6 +278,7 @@ def main():
             "source": "spectral-film-lut 0.18.0 (MIT, Jan Lohse)",
             "greyRampStops": [int(x) for x in stops],
             "grade": {"blackLift": BLACK_LIFT, "chromaMid": CHROMA_MID, "chromaHigh": CHROMA_HIGH, "chromaHighY": CHROMA_HIGH_Y,
+                      "blueHighChroma": BLUE_HIGH_CHROMA, "blueHue": list(BLUE_HUE), "blueY": list(BLUE_Y),
                       "toeLift": TOE_LIFT, "toePeakY": TOE_PEAK_Y, "highlightWarm": list(HIGHLIGHT_WARM),
                       "highlightWarmY": [HIGHLIGHT_WARM_Y0, HIGHLIGHT_WARM_Y1]},
             "chromaReport": report,

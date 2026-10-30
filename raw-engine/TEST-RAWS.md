@@ -9,3 +9,11 @@ All three come from raw.pixls.us, whose per-file licence column marks each as **
 | `leicaq2-47mp.dng` | Leica Q2, Bayer DNG, 14-bit | 8424×5632 (47.4 MP) | CC0 | https://raw.pixls.us/getfile.php/3204/nice/Leica%20-%20Q2%20-%2014bit%2014bit%20uncompressed%20(3:2).DNG | a71f9840…94ad |
 
 raw.pixls.us has no 48 MP iPhone ProRAW sample. The Leica Q2 file stands in for the 48 MP memory test (same pixel count class, 87 MB file). A real 48 MP ProRAW should be tested once the owner shoots one.
+
+## Derived fixture (phase 4)
+
+| File | Made from | Change | Licence |
+|---|---|---|---|
+| `iphonexs-bayer-rot8.dng` | `iphonexs-bayer.dng` | `exiftool -Orientation#=8` (rotate 270 CW). Pixels unchanged. Used by `EdgeCaseTests` to check that orientation is applied. | CC0, same as the source |
+
+The ProRAW sample is itself stored landscape with Orientation 6 (Rotate 90 CW), so it covers the other rotation.

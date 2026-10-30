@@ -34,6 +34,15 @@
   "chromaMid": 1.0,
   "chromaHigh": 0.8,
   "chromaHighY": 0.6,
+  "blueHighChroma": 0.7,
+  "blueHue": [
+   200.0,
+   290.0
+  ],
+  "blueY": [
+   0.2,
+   0.45
+  ],
   "toeLift": 1.12,
   "toePeakY": 0.015,
   "highlightWarm": [
@@ -52,14 +61,14 @@
    "chroma": 19.3
   },
   "L40-60": {
-   "vsPlain": 0.582,
+   "vsPlain": 0.581,
    "chroma": 19.1
   },
   "L70-90": {
    "vsPlain": 0.416,
-   "chroma": 13.7
+   "chroma": 13.6
   },
-  "highOverMid": 0.717
+  "highOverMid": 0.712
  },
  "greyRampOutLinear": [
   [
@@ -123,14 +132,14 @@
    0.610828
   ],
   [
-   0.86103,
+   0.861031,
    0.834577,
-   0.697654
+   0.697653
   ],
   [
-   0.917338,
+   0.917339,
    0.889151,
-   0.743263
+   0.743262
   ],
   [
    0.948772,

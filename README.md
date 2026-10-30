@@ -1,8 +1,8 @@
 # Pocket Film Lab
 
-A small mobile web app that gives a film look to photos you already have. Open a JPEG or PNG on the iPhone, adjust the look, compare with the original, and save a new JPEG. The original photo does not change.
+A small mobile web app that gives a film look to photos you already have, plus a native RAW engine inside the iOS app (see "RAW mode"). Open a JPEG or PNG on the iPhone, adjust the look, compare with the original, and save a new JPEG. The original photo does not change.
 
-**This is not Chromagraph and not a Yedlin clone.** Chromagraph develops RAW sensor data with a proprietary pipeline. This app works on already-rendered JPEG/PNG pixels. Its colour comes from a datasheet-based film simulation (see "Fidelity").
+**This is not Chromagraph and not a Yedlin clone.** Chromagraph develops RAW sensor data with a proprietary pipeline. The web app works on already-rendered JPEG/PNG pixels; the iOS app's RAW mode develops DNG/ProRAW with its own engine. Its colour comes from a datasheet-based film simulation (see "Fidelity").
 
 ## Use
 
@@ -56,7 +56,26 @@ How the LUTs are made (`tools/make_lut.py`, `npm run luts`):
 
 Not done, because no legal reference data was available: a measured comparison against Chromagraph output. To do it, shoot the same scene, ideally with a colour checker and grey card, in Chromagraph and in the iPhone Camera, from a tripod at the same time. Then sample the patches and fit `FILM_TONE_WEIGHT`, exposure and grain. Do not use images taken from Chromagraph's marketing or app bundle.
 
+## RAW mode (iOS app only)
+
+The iOS wrapper in `ios/` adds a native RAW engine. The web page stays the control surface; the phone's GPU does the developing. In a desktop browser none of this shows and the app is the JPEG/PNG app above.
+
+- **Open RAW** (Photos) or **RAW from Files** takes a ProRAW or Bayer DNG. If the picked photo is not RAW, its JPEG/PNG/HEIC goes to the normal JPEG path instead. The original is only read, never written.
+- Pipeline: `CIRAWFilter` decode to scene-linear (Apple's tone curve, local tone map, sharpening and boost off; the file's as-shot white balance, baseline exposure and orientation kept) → optional softness and halation in linear light → a 65³ float film cube (Vision3 250D, Vision3 500T or Portra 400 negative printed on Kodak 2383, generated from Spectral Film LUT, MIT) → grain in print density.
+- Controls: look, strength, exposure, white balance and tint (start at the file's as-shot values; the sliders widen if the file was shot outside 2000–12000 K or tint ±100), grain, halation, softness (off by default), hold to compare with the plain decode. Gate weave is not offered: on a single still it would only be a sub-pixel shift.
+- Save JPEG / Save HEIC renders at full size and opens the share sheet. Exports are upright (orientation 1) and carry no location, camera or date metadata. Each export gets a fresh grain pattern.
+- Build: `npm run build`, then `cd ios && xcodegen generate` and open `PocketFilmLab.xcodeproj`. The Metal Toolchain must be installed (`xcodebuild -downloadComponent MetalToolchain`).
+- Tests: `tools/fetch_test_raws.sh` (CC0 DNGs from raw.pixls.us, plus a rotated copy), then `cd ios && xcodebuild test -project PocketFilmLab.xcodeproj -scheme PocketFilmLab -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`.
+- Rebuild the film cubes: `tools/.venv/bin/python tools/make_raw_lut.py`.
+- Docs: `raw-engine/PLAN.md` (design), `raw-engine/PROGRESS.md` (phase log), `measurements/RAW-REPORT.md` (measurements, fidelity and gaps), `references/LOOK-TRAITS.md` (what was measured from public sample photos).
+- **Status: simulator only.** No iPhone was available while this was built, so speed, memory, the Photos picker and the share sheet are unverified on a phone.
+
+The look is tuned toward the feel of public Chromagraph sample photos by measuring them (black level, highlight roll-off and warmth, saturation by brightness, sky colour, grain). Nothing was taken from the Chromagraph app, and this is not Chromagraph.
+
 ## RAW: feasibility of a real RAW-to-film engine
+
+This section was written before the RAW mode above existed. Route 2 is the one that was built.
+
 
 Raw2Film (MIT) is Python with rawpy/LibRaw, OpenCV, numba, scipy, lensfunpy and wgpu, and its colour comes from Spectral Film LUT. Options for a phone:
 
