@@ -114,7 +114,7 @@ final class LifecycleTests: XCTestCase {
         bridge.clear()
         await fulfillment(of: [done], timeout: 60)
         XCTAssertNil(shared)
-        XCTAssertEqual(message, "The photo was closed before the export finished.")
+        XCTAssertEqual(message, RawBridge.closedWhileSavingMessage)
         XCTAssertEqual(Self.exportFiles(), before, "the stale render was deleted")
     }
 
@@ -170,7 +170,7 @@ final class LifecycleTests: XCTestCase {
             _ = try await call { self.bridge.handle("source", ["id": id], reply: $0) }
             XCTFail("expected an error")
         } catch {
-            XCTAssertTrue(error.localizedDescription.contains("Could not read"), error.localizedDescription)
+            XCTAssertEqual(error.localizedDescription, RawBridge.oopsMessage)
         }
         bridge.clear()
     }

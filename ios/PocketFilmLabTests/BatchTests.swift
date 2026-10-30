@@ -90,7 +90,7 @@ final class BatchTests: XCTestCase {
             _ = try await call("render", ["id": photoID])
             XCTFail("a JPEG has no native render")
         } catch {
-            XCTAssertEqual(error.localizedDescription, "Not a RAW photo.")
+            XCTAssertEqual(error.localizedDescription, RawBridge.oopsMessage)
         }
     }
 
@@ -155,7 +155,7 @@ final class BatchTests: XCTestCase {
             _ = try await call("save", ["id": try XCTUnwrap(items.first?["id"] as? String), "format": "heic"])
             XCTFail("expected an error")
         } catch {
-            XCTAssertTrue(error.localizedDescription.contains("not allowed"), error.localizedDescription)
+            XCTAssertTrue(error.localizedDescription.contains("needs your OK"), error.localizedDescription)
         }
         XCTAssertFalse(FileManager.default.fileExists(atPath: try XCTUnwrap(saver.saved.first).url.path))
     }
@@ -196,5 +196,28 @@ final class BatchTests: XCTestCase {
         } catch {
             XCTAssertTrue(saver.saved.isEmpty, "a closed photo never reaches Photos")
         }
+    }
+
+    /// App Store guideline 5.2.1: what the app shows has no film-stock trademarks, and the
+    /// app is called Silver Hour.
+    func testUserVisibleNamesAreGeneric() async throws {
+        let reply = try await call("looks")
+        let labels = (reply["looks"] as? [[String: String]] ?? []).compactMap { $0["label"] }
+        XCTAssertEqual(labels, ["Daylight", "Lamplight", "Portrait"])
+        let info = Bundle.main.infoDictionary ?? [:]
+        let visible = labels + [
+            info["CFBundleDisplayName"] as? String ?? "",
+            info["NSPhotoLibraryAddUsageDescription"] as? String ?? "",
+            RawBridge.closedMessage, RawBridge.oopsMessage, RawBridge.pickFailedMessage, RawBridge.closedWhileSavingMessage,
+            SystemPhotoSaver.Failure.notAllowed.localizedDescription, SystemPhotoSaver.Failure.failed.localizedDescription,
+        ]
+        let trademark = try NSRegularExpression(pattern: "kodak|portra(?!it)|vision ?3|\\b250d\\b|\\b500t\\b|2383|endura", options: .caseInsensitive)
+        for text in visible {
+            XCTAssertNil(trademark.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)), text)
+            XCTAssertFalse(text.localizedCaseInsensitiveContains("film lab"), text)
+        }
+        XCTAssertEqual(info["CFBundleDisplayName"] as? String, "Silver Hour")
+        XCTAssertEqual(info["CFBundleShortVersionString"] as? String, "1.0")
+        XCTAssertEqual(info["ITSAppUsesNonExemptEncryption"] as? Bool, false)
     }
 }
