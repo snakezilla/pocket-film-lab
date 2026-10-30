@@ -24,6 +24,7 @@
 		6F4937FADC4CE2AB7F399936 /* dist in Resources */ = {isa = PBXBuildFile; fileRef = 213B3A3F0E823CA7B9AB0EB0 /* dist */; };
 		75F5E5FB5015473E849F85FD /* SpeedMemoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7556D6A7BFAA451EEB533BC /* SpeedMemoryTests.swift */; };
 		7B68898E17B9A1D9E3921B8F /* TextureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67420A328FBDDC120BCE84E7 /* TextureTests.swift */; };
+		86518DA277AABBAF47887280 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 142654E299F7A73711FEFCF8 /* Assets.xcassets */; };
 		96080ED095C37E42E98A581C /* WhiteBalanceMatrix.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31CE71C1042EE733662E0EFE /* WhiteBalanceMatrix.swift */; };
 		9746EE6C11367DAAE09C4CFF /* LookSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 325F8169CA210362959F2B51 /* LookSheetTests.swift */; };
 		98EC5974F35975C4026BE0EC /* PreviewStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8D64A46EA10A5210D57980 /* PreviewStore.swift */; };
@@ -58,6 +59,7 @@
 		0522147486E8FA2792CC8E51 /* FallbackImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackImage.swift; sourceTree = "<group>"; };
 		0E853E7A46BD529C36606320 /* RawPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawPipelineTests.swift; sourceTree = "<group>"; };
 		0FE50B231A423AFB92F6DD37 /* portra400-2383.cube.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = "portra400-2383.cube.bin"; sourceTree = "<group>"; };
+		142654E299F7A73711FEFCF8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		20DAC6FD005DE611C9570757 /* PocketFilmLab.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PocketFilmLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		213B3A3F0E823CA7B9AB0EB0 /* dist */ = {isa = PBXFileReference; lastKnownFileType = folder; name = dist; path = ../dist; sourceTree = SOURCE_ROOT; };
 		21EFFAA351E06B4A7858A4BF /* PocketFilmLabTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PocketFilmLabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -158,6 +160,7 @@
 			isa = PBXGroup;
 			children = (
 				320BAC53679D55E46339E600 /* App.swift */,
+				142654E299F7A73711FEFCF8 /* Assets.xcassets */,
 				F3D8C8D1242D8A6A33BDDA0D /* WebSecurity.swift */,
 				30C6EB742486DCA6DE1B8758 /* WebView.swift */,
 				007153F3D21A2231B848C3D4 /* Bridge */,
@@ -276,6 +279,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				86518DA277AABBAF47887280 /* Assets.xcassets in Resources */,
 				6F4937FADC4CE2AB7F399936 /* dist in Resources */,
 				5B1037D962341A3F9A075A3D /* portra400-2383.cube.bin in Resources */,
 				2BFD09A7B172303AD523A21B /* portra400-2383.json in Resources */,
@@ -352,7 +356,7 @@
 				DEVELOPMENT_TEAM = 9HF7TSVCH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Film Lab";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save processed photos to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Film Lab saves your developed photos to your library. It never reads or changes your other photos.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -480,7 +484,7 @@
 				DEVELOPMENT_TEAM = 9HF7TSVCH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Film Lab";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save processed photos to your library.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Film Lab saves your developed photos to your library. It never reads or changes your other photos.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
