@@ -1,6 +1,30 @@
-# RAW engine: final report (phases 1–4)
+# RAW engine: final report (phases 1–4 + landing pass)
 
-Measured on 2026-10-29 on the iPhone 17 Pro **simulator** (iOS 27 SDK, Mac GPU). **No phone was available in any phase**, so nothing here is verified on an iPhone. Final test pass (phase 4, 00:04): iOS **34/34**, web `npm test` **41/41**, `npm run test:e2e` **12/12**.
+Measured on the iPhone 17 Pro **simulator** (iOS 26.5 runtime, Xcode 27.0 / SDK 27.0, Mac GPU). **No phone was used in any phase**: nothing here is verified on an iPhone.
+
+**Final run, after all landing-pass fixes, at revision `02b8fa7`:** iOS **50/50**, web `npm test` **45/45**, `npm run test:e2e` **12/12**, with no failures or skips. Commands, test names and the artifacts are in [`artifacts/SUMMARY.md`](artifacts/SUMMARY.md).
+
+## Landing pass (2026-10-30)
+
+- **WebView boundary** (`WebSecurity.swift`, `SecurityTests` 6):
+  - Both bridges answer only the bundled page's main frame (app://local). Tested negatively: another origin, and a same-origin iframe, both get "Untrusted sender".
+  - Navigation: app://local loads. A tapped https link opens in Safari. http, file, javascript, data, other app:// hosts and scripted redirects are refused.
+  - The scheme handler serves only `local`, and only files inside `dist/`. `..`, encoded `..` and symlinks out of the folder are refused.
+  - The Web Inspector is enabled in DEBUG builds only.
+- **Lifecycle** (`LifecycleTests` 8 + 4 web unit tests):
+  - New `clear` command. Close and new-file both bump an epoch. A render or export that finishes for an older file is dropped (`stale`) and never shown or shared; a stale export is deleted.
+  - The temp copy is removed on the render queue after the work already queued for it. Previews are dropped. LUT loading moved onto the render queue, so the engine cache is touched from one queue only.
+  - Tested: slow render then clear, slow render then new file, rapid sliders, export after clear, a cancelled picker (the current file stays open), a failed import, and an image extent that doesn't start at 0,0.
+- **JPEG/PNG share**: the old share bridge now shares the page's encoded file (same bytes, safe name, extension taken from the bytes), not a re-encoded UIImage.
+- **Neutral baseline**:
+  - The shipped cubes are neutral on the grey axis again (`WARM_IN_CUBE = False`). The cream highlights became an optional `warmth` setting, default 0, with a Warm highlights slider.
+  - Strict neutral grey tests are back at every stop, plus a test that warmth only touches highlights.
+  - The pale-sky trim is off.
+- **Corrections**:
+  - Removed the claim that the simulator footprint proves the export fits a 6 GB phone.
+  - "No public 48 MP ProRAW" became "none obtained or tested here".
+  - Phase 2's iOS count is 18/18 full plus a 6/6 subset, not 19/19.
+
 
 ## Fidelity summary (honest)
 
@@ -12,9 +36,9 @@ How close it is to the Chromagraph feel, trait by trait. "Measured" means compar
 |---|---|---|
 | Lifted, soft blacks (floor ~code 5) | close | measured: floor 5–6 vs reference median ~5 |
 | Long highlight shoulder (+6 stops still under white) | close | measured: +6 stops = 248/245/226; references 209–251 without sun |
-| Warm, cream near-whites | close | measured: b\* +8.7 to +9.4 from +3 stops; references +8.3 to +10.6 |
+| Warm, cream near-whites | **optional, off by default** | the default print is neutral. The `warmth` setting at 1 gives b\* about +9 from +3 stops, close to the references (+8.3 to +10.6). Those reference numbers are rendered scene distributions, not a calibrated transform |
 | Saturation falling with brightness | roughly | measured: high/mid chroma 0.53–0.72 vs reference 0.47–0.50, a bit too saturated in the brights |
-| Pale skies lose their blue | partly | measured direction, conservative amount: light/hazy blues ×0.72–0.83 (phase 4), references ×0.68 to ×0 |
+| Pale skies lose their blue | not applied | a phase-4 trim was turned back off in the landing pass (owner direction: scene quantiles are not a calibrated transform) |
 | Warm mid-tones keep or gain colour | partly | the film model does this; not tuned separately |
 | Shadow density (toe) | roughly | direction measured, amount judged (toe lift ×1.12) |
 | Grain: fine, strongest in mid-tones, none in white | close | measured std 4.0 / 2.6 / 2.1 codes at mid / code 197 / code 70; reference ~4 / 3 / 1.5 |
@@ -46,7 +70,7 @@ Finding: at 1800 K with tint −150 the red channel goes to about zero and some 
 
 - **WB fitter pre-warm.** After the first preview, the bridge builds the white-balance fitter on the render queue. First WB change: **231–353 ms cold → 78–93 ms pre-warmed** (`SpeedMemoryTests.testPrewarmedFirstWhiteBalanceChange`).
 - **Softness** (optional, off by default, scene-linear before halation): a blur with sigma 0.07% of the long edge, mixed in at up to 60%. On 4 px detail it lowers contrast to 40% at the slider maximum, with mean and neutrality unchanged (`TextureTests.testSoftnessIsGentleAndOffByDefault`). Size and mix are judged by eye. **Gate weave was not built**: on a single still it reduces to a sub-pixel shift you cannot see.
-- **Pale-sky chroma** (`BLUE_HIGH_CHROMA` 0.7 in `tools/make_raw_lut.py`, Lab hue 200–290°, ramping in from display Y 0.2 to 0.45). Probe through the 250D cube, old → new (`tools/probe_cube.py`):
+- **Superseded in the landing pass: the trim is off (`BLUE_HIGH_CHROMA` 1.0).** For the record, the phase-4 version was **Pale-sky chroma** (`BLUE_HIGH_CHROMA` 0.7 in `tools/make_raw_lut.py`, Lab hue 200–290°, ramping in from display Y 0.2 to 0.45). Probe through the 250D cube, old → new (`tools/probe_cube.py`):
 
   | Patch (scene-linear) | L\* | C\* before → after |
   |---|---|---|
@@ -72,7 +96,7 @@ Finding: at 1800 K with tint −150 the red channel goes to about zero and some 
 ## Remaining gaps (for the owner)
 
 1. **Device.** Install and run on an iPhone: `devicectl` listed "AE's iPhone 13 Pro" as unavailable in every phase. Speed, memory (the 47 MP export peak of ~+210 MB is the number to watch), the Photos picker, the share sheet and HEIC saving to Photos are unverified on a phone.
-2. **A real 48 MP iPhone ProRAW.** None is public under a free licence. The Leica Q2 47 MP DNG stood in.
+2. **A real 48 MP iPhone ProRAW.** None was obtained or tested here. The Leica Q2 47 MP Bayer DNG is only a size proxy.
 3. **Matched calibration shots** (see the fidelity limits above): the single most useful next step for fidelity.
 4. **Halation and skin** need reference evidence: a Chromagraph shot with a bare bulb or the sun in frame, and a portrait.
 5. **Per-stock tuning.** 500T and Portra share the 250D grade.
@@ -88,7 +112,7 @@ Measured on 2026-10-29 on the iPhone 17 Pro **simulator** (iOS 27 SDK, Mac GPU).
 cd ios && xcodebuild test -project PocketFilmLab.xcodeproj -scheme PocketFilmLab -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-Each number below is printed by a test (`MEMORY`, `LARGE`, `WB`, `BRIDGE`, `EXPORT`, `PRIVACY` lines). The test files are the CC0 DNGs in `raw-engine/TEST-RAWS.md`. There is no public 48 MP iPhone ProRAW, so the 47 MP Leica Q2 DNG (8424×5632, 8368×5584 after crop) stands in for it.
+Each number below is printed by a test (`MEMORY`, `LARGE`, `WB`, `BRIDGE`, `EXPORT`, `PRIVACY` lines). The test files are the CC0 DNGs in `raw-engine/TEST-RAWS.md`. No 48 MP iPhone ProRAW was obtained or tested here *(corrected 2026-10-30: an earlier version said none is public, which was not established by a scoped search)*. The 47 MP Leica Q2 DNG (8424×5632, 8368×5584 after crop) is only a size proxy: it is a Bayer DNG, not ProRAW.
 
 ## 1. Memory and speed on a 47 MP file
 
@@ -104,7 +128,7 @@ Each number below is printed by a test (`MEMORY`, `LARGE`, `WB`, `BRIDGE`, `EXPO
 
 Reading:
 - The preview path never decodes at full size. CIRAWFilter's `scaleFactor` decodes straight to about 1600 px, so a 47 MP file costs about 34 MB while editing.
-- Full-size export peaks at +160 to +220 MB. The 8-bit output bitmap alone is 187 MB (8368×5584×4), so Core Image is already tiling everything else. On a 6 GB phone this is well inside the app's memory limit. No change was needed this phase. The phase-2 and phase-3 numbers come from different runs on the same machine. The spread between runs is about ±40 MB and ±1 s, so read the change as "no regression", not as a gain.
+- Full-size export peaks at +160 to +220 MB. The 8-bit output bitmap alone is 187 MB (8368×5584×4), so Core Image is already tiling everything else. *(Corrected 2026-10-30.)* This does **not** show the export fits a phone's app memory limit: the limit (jetsam) depends on the device, the OS and what else is in memory, and there has been no phone run. It is a simulator footprint only. The phase-2 and phase-3 numbers come from different runs on the same machine. The spread between runs is about ±40 MB and ±1 s, so read the change as "no regression", not as a gain.
 
 ## 2. White balance preview: matrix instead of re-decode
 
@@ -152,6 +176,8 @@ Both "Open RAW" (Photos) and "RAW from Files" now accept a photo that is not RAW
 - Not covered: the PHPicker and Files UI can't be automated here, so a human still has to click through the path from the picker to `startSession`.
 
 ## 5. Tuning pass 2: grey axis, before and after
+
+*Superseded in the landing pass (2026-10-30): the shipped cubes are neutral on the grey axis again. The warm column below is what the optional `warmth` setting at 1 gives.*
 
 Changes in `tools/make_raw_lut.py`, from the two before/after pairs (mezha1, and cakesauce on X, posted by the assistant account). The evidence is in `references/LOOK-TRAITS.md`, under "Tuning pass 2".
 - **Warm highlights** (`HIGHLIGHT_WARM`): near-whites go to b\* about +9 and a\* about −2, ramping in from display Y 0.36 (+1 stop) to Y 0.64. Measured target: b\* +8 to +11 in 8 of 9 reference outputs, with both pairs shifting by +10 or more.

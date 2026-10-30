@@ -71,7 +71,7 @@ Done:
   - Hold-to-compare shows the plain decode.
   - HEIC/JPEG full-size export goes to the share sheet. The temp file is removed afterwards. No metadata; each export gets a fresh grain seed.
   - Web: `src/native.ts` (client) and `src/rawmode.ts`. `main.ts` shows "Open RAW" and "RAW from Files" only when the bridge exists, plus native look buttons, white balance and tint sliders (as-shot by default), and Save JPEG / Save HEIC. The JPEG/PNG path is unchanged, and the browser build doesn't show the RAW controls.
-- Tests: iOS 19/19 on the iPhone 17 Pro simulator.
+- Tests: *(corrected 2026-10-30)* the evidence is one full iOS run at **18/18**, then a **6/6** subset run after the halation test fix. No complete 19/19 run happened in phase 2. The halation failure and its fix are as recorded at the time.
   - New: `TextureTests` (all looks neutral on greys; looks differ on skin; grain density weighting and scaling; halation colour and locality), `BridgeTests` (settings clamping; a real WKWebView round trip), `LookSheetTests` (writes renders to `ios/TestData/renders/<timestamp>/`, gitignored), and a 47 MP export with texture.
   - Web: `npm test` 35/35 (new `native.test.ts`), `npm run test:e2e` 12/12.
 
@@ -108,7 +108,7 @@ Done:
 - **Speed and memory on a 47 MP file** (`SpeedMemoryTests.testLargeFilePreviewPath`): open, first preview, slider moves, a WB change and peak memory on the preview path.
 - **Tuning pass 2** (`tools/make_raw_lut.py`, `references/LOOK-TRAITS.md` "Tuning pass 2", `tools/measure_refs.py`):
   - New references: the cakesauce before/after pair on X, the dmcgco interior and 3 Newsshooter images. These are the ones the assistant account posted on issue #7; copies are in `references/local/`, which is gitignored. The AppleInsider pair still returns 403.
-  - Warm highlights are now on: greys at +3 to +6 stops sit at b\* +8.7 to +9.4, a\* about −2. Reference: b\* +8.3 to +10.6 in 8 of 9 outputs, and both pairs shift by at least +10. This settles open decision 1.
+  - *(Superseded in the landing pass: the cube is neutral again, and warmth is an optional setting, default 0.)* Warm highlights are now on: greys at +3 to +6 stops sit at b\* +8.7 to +9.4, a\* about −2. Reference: b\* +8.3 to +10.6 in 8 of 9 outputs, and both pairs shift by at least +10. This settles open decision 1.
   - Small toe lift (×1.12 at code ~32; stop −2 goes 34 → 36). This settles open decision 2. The direction is measured, the size is not.
   - The grey-neutral tests now require neutral greys up to +1 stop. Above that they require a warm but bounded tint: R ≥ G ≥ B, B/G > 0.8, R/G < 1.05 (`assertGreyOrWarmHighlight`).
 - Tests: iOS **26/26** on the iPhone 17 Pro simulator. Web `npm test` **36/36**, `npm run test:e2e` **12/12**.
@@ -139,7 +139,7 @@ Done:
 - **Bug fixed:** the web WB sliders (2000–12 000 K, tint ±100) silently clamped an as-shot value outside that range. They now widen to include it (`rangeIncluding` in `src/rawmode.ts`, plus a unit test).
 - **WB fitter pre-warm** after the first preview. The first WB change went from 231–353 ms to 78–93 ms (phase-3 next step 3).
 - **Softness** (optional, off by default): a native setting, a bridge key and a RAW-only slider. **Gate weave was not built**: on a still it is only a sub-pixel shift.
-- **Pale-sky chroma trim** (`BLUE_HIGH_CHROMA` 0.7). Light and hazy blues go to ×0.72–0.83 chroma, while deep blues, skin and foliage are unchanged (`tools/probe_cube.py`). This settles phase-3 next step 1. The amount is the gentler measured pair; the ramp is judged.
+- *(Turned back off in the landing pass.)* **Pale-sky chroma trim** (`BLUE_HIGH_CHROMA` 0.7). Light and hazy blues go to ×0.72–0.83 chroma, while deep blues, skin and foliage are unchanged (`tools/probe_cube.py`). This settles phase-3 next step 1. The amount is the gentler measured pair; the ramp is judged.
 - **Code review fixes** (independent reviewer agent): a pre-warm that fails is no longer retried on every render, and it is skipped when a newer render or another file is waiting. The page sends the exact as-shot WB until a slider is moved, because a range input snaps 5201 K to 5200 K. Widened slider ranges stop at the native limits. A junk-input test could never fail; it is fixed. A timing assertion was replaced by a state check. A missing fixture now skips with a hint instead of failing in confusing ways.
 - **Docs:** a README "RAW mode (iOS app only)" section, the THIRD_PARTY_NOTICES stock list, the derived fixture in TEST-RAWS.md, and the final RAW-REPORT.md.
 - **Final test pass:** iOS **34/34** on the iPhone 17 Pro simulator, web `npm test` **41/41**, `npm run test:e2e` **12/12**.
@@ -151,8 +151,14 @@ Not done / blockers:
 - The PHPicker / Files picker has still not been clicked through by a human.
 - Halation and skin are unverified against references (there is no usable evidence).
 
+## Landing pass (2026-10-30 00:20–00:40): owner review items. DONE, simulator only
+
+What was done, and the evidence, is at the top of `measurements/RAW-REPORT.md`; the artifacts are in `measurements/artifacts/` (see its SUMMARY.md). The final full run at `02b8fa7`: iOS 50/50, web 45/45, e2e 12/12.
+
+Still not verified: phone, Photos/Files pickers (the screenshot uses a DEBUG-only launch argument instead of a picker), the share sheet and saving to Photos, per-look fidelity, halation and skin. No device was installed or signed, per the owner's direction.
+
 ## After phase 4 (for the owner)
 1. Pair the iPhone, then `xcrun devicectl device install app --device <id> <path to .app>`, and re-run the speed and memory numbers on the phone.
 2. Shoot matched calibration pairs (Chromagraph vs iPhone ProRAW, tripod, colour checker); that is the next big fidelity step.
-3. Share a 48 MP iPhone ProRAW for the memory test, and a Chromagraph shot with a light source in frame (halation) and a portrait (skin).
+3. A 48 MP iPhone ProRAW for the memory test (none was obtained or tested here), and a Chromagraph shot with a light source in frame (halation) and a portrait (skin).
 4. Per-stock tuning for 500T and Portra.

@@ -62,15 +62,17 @@ The iOS wrapper in `ios/` adds a native RAW engine. The web page stays the contr
 
 - **Open RAW** (Photos) or **RAW from Files** takes a ProRAW or Bayer DNG. If the picked photo is not RAW, its JPEG/PNG/HEIC goes to the normal JPEG path instead. The original is only read, never written.
 - Pipeline: `CIRAWFilter` decode to scene-linear (Apple's tone curve, local tone map, sharpening and boost off; the file's as-shot white balance, baseline exposure and orientation kept) → optional softness and halation in linear light → a 65³ float film cube (Vision3 250D, Vision3 500T or Portra 400 negative printed on Kodak 2383, generated from Spectral Film LUT, MIT) → grain in print density.
-- Controls: look, strength, exposure, white balance and tint (start at the file's as-shot values; the sliders widen if the file was shot outside 2000–12000 K or tint ±100), grain, halation, softness (off by default), hold to compare with the plain decode. Gate weave is not offered: on a single still it would only be a sub-pixel shift.
+- Controls: look, strength, exposure, white balance and tint (start at the file's as-shot values; the sliders widen if the file was shot outside 2000–12000 K or tint ±100), grain, halation, softness and warm highlights (both off by default; at 0 the print keeps greys neutral), hold to compare with the plain decode. Gate weave is not offered: on a single still it would only be a sub-pixel shift.
 - Save JPEG / Save HEIC renders at full size and opens the share sheet. Exports are upright (orientation 1) and carry no location, camera or date metadata. Each export gets a fresh grain pattern.
 - Build: `npm run build`, then `cd ios && xcodegen generate` and open `PocketFilmLab.xcodeproj`. The Metal Toolchain must be installed (`xcodebuild -downloadComponent MetalToolchain`).
 - Tests: `tools/fetch_test_raws.sh` (CC0 DNGs from raw.pixls.us, plus a rotated copy), then `cd ios && xcodebuild test -project PocketFilmLab.xcodeproj -scheme PocketFilmLab -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`.
 - Rebuild the film cubes: `tools/.venv/bin/python tools/make_raw_lut.py`.
+- Security: only the bundled page (app://local, main frame) may use the native bridges. Tapped https links open in Safari; other navigation is refused. The Web Inspector is on in debug builds only. Close or open another file and the native side drops the old session, its temp copy and previews; late results from the old file are never shown or shared.
+- Inspection artifacts (CC0-derived and synthetic): `measurements/artifacts/`.
 - Docs: `raw-engine/PLAN.md` (design), `raw-engine/PROGRESS.md` (phase log), `measurements/RAW-REPORT.md` (measurements, fidelity and gaps), `references/LOOK-TRAITS.md` (what was measured from public sample photos).
 - **Status: simulator only.** No iPhone was available while this was built, so speed, memory, the Photos picker and the share sheet are unverified on a phone.
 
-The look is tuned toward the feel of public Chromagraph sample photos by measuring them (black level, highlight roll-off and warmth, saturation by brightness, sky colour, grain). Nothing was taken from the Chromagraph app, and this is not Chromagraph.
+The look is tuned toward the feel of public Chromagraph sample photos by measuring them (black level, highlight roll-off, saturation by brightness, grain; the warm-highlight trait is offered as an optional setting, not the default). Nothing was taken from the Chromagraph app, and this is not Chromagraph.
 
 ## RAW: feasibility of a real RAW-to-film engine
 
